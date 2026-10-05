@@ -1,0 +1,25 @@
+---
+const {
+  eyebrow,
+  title,
+  text,
+  image = "",
+  imageAlt = "",
+  compact = false,
+} = Astro.props;
+---
+
+<section class:list={{ "page-hero": true, "page-hero-compact": compact }}>
+  <div class="shell page-hero-grid">
+    <div class="page-hero-copy">
+      <span class="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{text}</p>
+    </div>
+    {
+      image && (
+        <div class="page-hero-art">
+          <img src={image} alt={imageAlt} />
+        </div>
+      )
+    }
+  </div>
+</section>

@@ -1,0 +1,125 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import AtlasPreview from "../components/AtlasPreview.astro";
+import IconCard from "../components/IconCard.astro";
+import { site } from "../data/site";
+---
+
+<SiteLayout
+  title="AtlasOS"
+  active="/"
+  dark={true}
+  description="A modern Linux experience for interactive classrooms. Discover AtlasOS, an education-focused Ubuntu-based Live Linux project."
+>
+  <section class="hero">
+    <div class="shell hero-grid">
+      <div class="hero-copy reveal">
+        <span class="eyebrow">A classroom-focused Linux project</span><h1>
+          A thoughtful Linux experience for the classroom.
+        </h1><p>
+          AtlasOS explores a calmer, more focused way to use Linux in
+          interactive classrooms — with teaching tools and system controls close
+          at hand.
+        </p><div class="hero-actions">
+          <a class="button button-primary" href="/AtlasOS/features/"
+            >Explore AtlasOS <span aria-hidden="true">→</span></a
+          ><a
+            class="button button-secondary"
+            href={site.repo}
+            target="_blank"
+            rel="noreferrer">View source on GitHub ↗</a>
+        </div><div class="hero-note">
+          Ubuntu-based Live environment · Open source · In development
+        </div>
+      </div><div class="hero-art reveal reveal-delay"><AtlasPreview /></div>
+    </div><div class="shell hero-metrics">
+      <div class="hero-metric">
+        <span class="metric-icon">✦</span> Designed around classroom workflows
+      </div><div class="hero-metric">
+        <span class="metric-icon">⌘</span> Built on Linux foundations
+      </div><div class="hero-metric">
+        <span class="metric-icon">↗</span> Developed in the open
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="shell">
+      <div class="section-heading">
+        <span class="eyebrow">The Atlas approach</span><h2>
+          Useful details, within reach.
+        </h2><p>
+          AtlasOS brings a classroom-minded interface to established Linux
+          components. The goal is a familiar place to start a lesson, reach
+          common tools, and understand the device at a glance.
+        </p>
+      </div><div class="pillars">
+        <IconCard
+          icon="▦"
+          title="Education focused"
+          text="A desktop organized around lesson tools, resources, and the classroom day."
+        /><IconCard
+          icon="◈"
+          title="Modern desktop"
+          text="A custom Qt and QML shell built for clear, touch-friendly interactions."
+        /><IconCard
+          icon="⌁"
+          title="Custom boot experience"
+          text="A Rust-based UEFI frontend created for the AtlasOS identity."
+        /><IconCard
+          icon="⌂"
+          title="Open development"
+          text="Source code and project decisions are available for review on GitHub."
+        />
+      </div>
+    </div>
+  </section>
+  <section class="section-tight">
+    <div class="shell split">
+      <div class="content-block">
+        <span class="eyebrow">Made for the classroom rhythm</span><h2>
+          Classrooms deserve software that feels considered.
+        </h2><p>
+          Teachers move between materials, displays, and the next part of a
+          lesson. AtlasOS is an ongoing project to make those everyday steps
+          easier to discover without hiding the Linux system beneath.
+        </p><div
+          class="benefit-grid"
+          style="grid-template-columns:1fr 1fr;margin-top:24px"
+        >
+          <div class="benefit">
+            <div class="icon-tile">✎</div><h3>Teaching tools</h3><p>
+              Shortcuts for files, presentations, video, whiteboard, and screen
+              annotation.
+            </p>
+          </div><div class="benefit">
+            <div class="icon-tile">◉</div><h3>Visible system state</h3><p>
+              Quick access to sound, network, display, and device information.
+            </p>
+          </div>
+        </div>
+      </div><div class="visual-card">
+        <div class="landscape-card">
+          <img
+            src="/AtlasOS/images/atlas-landscape.png"
+            alt="Layered blue mountain and city landscape used in AtlasOS visual identity"
+            loading="lazy"
+          /><div class="landscape-overlay">
+            <h3>A clearer start to the lesson.</h3><p>
+              Designed for focus, with the classroom in mind.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="shell cta-band">
+      <div>
+        <h2>See how AtlasOS is taking shape.</h2><p>
+          Explore the product, read the project source, and follow its progress.
+        </p>
+      </div><a class="button button-light" href="/AtlasOS/about/"
+        >About the project <span aria-hidden="true">→</span></a>
+    </div>
+  </section>
+</SiteLayout>

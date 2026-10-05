@@ -1,0 +1,68 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import PageHero from "../components/PageHero.astro";
+import IconCard from "../components/IconCard.astro";
+import { site } from "../data/site";
+---
+
+<SiteLayout
+  title="Community"
+  active=""
+  description="Join the open AtlasOS project on GitHub, explore its code, and report reproducible issues."
+>
+  <PageHero
+    eyebrow="The project is open"
+    title="Be part of the work."
+    text="AtlasOS is built in public. Explore how it works, follow project decisions, and share specific feedback through the repository."
+    image="/AtlasOS/images/atlas-landscape.png"
+    imageAlt="AtlasOS blue landscape artwork"
+    compact={true}
+  />
+  <section class="page-content">
+    <div class="shell">
+      <div class="link-grid">
+        <a class="link-card" href={site.repo} target="_blank" rel="noreferrer"
+          ><div class="icon-tile">⌘</div><h3>GitHub repository ↗</h3><p>
+            Browse AtlasOS source code, project documentation, and development
+            history.
+          </p></a
+        ><a
+          class="link-card"
+          href={site.issues}
+          target="_blank"
+          rel="noreferrer"
+          ><div class="icon-tile">◎</div><h3>Report an issue ↗</h3><p>
+            Share a reproducible bug report or suggest a focused improvement.
+          </p></a
+        ><a
+          class="link-card"
+          href={site.roadmap}
+          target="_blank"
+          rel="noreferrer"
+          ><div class="icon-tile">↗</div><h3>Project roadmap ↗</h3><p>
+            Read what is implemented, what is being explored, and what remains
+            planned.
+          </p></a>
+      </div><div class="content-block" style="margin-top:60px">
+        <span class="eyebrow">Helpful reports</span><h2>
+          Details make feedback actionable.
+        </h2><p>
+          For a technical report, include the AtlasOS version, device model,
+          CPU/GPU, boot mode, display resolution, Live or installed state, and
+          steps to reproduce. Please leave out serial numbers, MAC addresses,
+          student information, and other private identifiers.
+        </p>
+      </div><div class="cta-band">
+        <div>
+          <h2>Start with the code.</h2><p>
+            AtlasOS is an independent project, developed openly on GitHub.
+          </p>
+        </div><a
+          class="button button-light"
+          href={site.repo}
+          target="_blank"
+          rel="noreferrer">Open AtlasOS on GitHub ↗</a>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

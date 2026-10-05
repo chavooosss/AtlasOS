@@ -1,0 +1,89 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import PageHero from "../components/PageHero.astro";
+import IconCard from "../components/IconCard.astro";
+---
+
+<SiteLayout
+  title="For Education"
+  active="/education/"
+  description="Why AtlasOS is being built for classroom teachers and interactive-board environments."
+>
+  <PageHero
+    eyebrow="For the people in the room"
+    title="Built around the classroom day."
+    text="AtlasOS is an independent project exploring a practical Live Linux environment for teachers, students, and the teams who support classroom devices."
+    image="/AtlasOS/images/atlas-landscape.png"
+    imageAlt="Blue layered landscape from the AtlasOS project artwork"
+  />
+  <section class="page-content">
+    <div class="shell">
+      <div class="content-block">
+        <span class="eyebrow">A classroom-minded direction</span><h2>
+          Designed for real classroom routines.
+        </h2><p>
+          The goal is a focused environment that makes common actions easier to
+          find while keeping the flexibility of Linux available to technical
+          teams.
+        </p><div class="feature-grid">
+          <IconCard
+            icon="▣"
+            title="Designed for interactive boards"
+            text="The project prioritizes classroom displays and touch-oriented use. Compatibility is still being evaluated across devices."
+          /><IconCard
+            icon="✦"
+            title="Simple for teachers"
+            text="A lesson-first home and direct shortcuts aim to reduce the number of steps between starting the system and opening a tool."
+          /><IconCard
+            icon="◎"
+            title="Familiar for students"
+            text="A clear, consistent interface is intended to make shared classroom devices easier to approach."
+          /><IconCard
+            icon="⚙"
+            title="Practical for schools"
+            text="Linux foundations keep the system understandable for maintenance and future school workflows."
+          />
+        </div>
+      </div><div class="content-block split">
+        <div class="visual-card">
+          <div class="landscape-card">
+            <img
+              src="/AtlasOS/images/atlas-landscape.png"
+              alt="Blue AtlasOS landscape artwork"
+              loading="lazy"
+            /><div class="landscape-overlay">
+              <h3>Room to learn and explore.</h3><p>
+                An independent project for a more focused classroom computing
+                experience.
+              </p>
+            </div>
+          </div>
+        </div><div>
+          <span class="eyebrow">A better classroom experience</span><h2>
+            Useful today, honest about what comes next.
+          </h2><p>
+            AtlasOS currently provides a Live desktop, teaching-oriented
+            shortcuts, and diagnostics tools. An installer, centralized device
+            administration, class profiles, offline content delivery, and
+            official education-service integration are not established
+            capabilities.
+          </p><p>
+            Physical validation is currently limited to a single owner-reported
+            device. The project continues to document what has been tested and
+            what remains open.
+          </p>
+        </div>
+      </div><div class="cta-band">
+        <div>
+          <h2>Follow the work in the open.</h2><p>
+            Read the roadmap and source to see how the project is progressing.
+          </p>
+        </div><a
+          class="button button-light"
+          href="https://github.com/chavooosss/AtlasOS/blob/main/ROADMAP.md"
+          target="_blank"
+          rel="noreferrer">View the roadmap ↗</a>
+      </div>
+    </div>
+  </section>
+</SiteLayout>

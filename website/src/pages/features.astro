@@ -1,0 +1,94 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import AtlasPreview from "../components/AtlasPreview.astro";
+import PageHero from "../components/PageHero.astro";
+import IconCard from "../components/IconCard.astro";
+---
+
+<SiteLayout
+  title="Features"
+  active="/features/"
+  description="Explore AtlasOS desktop, education workflows, diagnostics, and custom UEFI boot frontend."
+>
+  <PageHero
+    eyebrow="The Atlas experience"
+    title="A Linux environment shaped around the lesson."
+    text="AtlasOS combines a classroom-oriented desktop with familiar Linux foundations. The project is actively developing, and each capability has a clearly documented scope."
+    image="/AtlasOS/images/atlas-landscape.png"
+    imageAlt="AtlasOS blue mountain landscape artwork"
+  />
+  <section class="page-content">
+    <div class="shell">
+      <div class="content-block">
+        <span class="eyebrow">Product foundations</span><h2>
+          Small, practical pieces that work together.
+        </h2><p>
+          AtlasOS builds on existing Linux services and applications, adding an
+          Atlas desktop and classroom-focused integration around them.
+        </p><div class="feature-grid">
+          <IconCard
+            icon="▧"
+            title="Education-focused environment"
+            text="A home screen and navigation organized around common teaching actions and local resource shortcuts."
+          /><IconCard
+            icon="◈"
+            title="Qt / QML desktop"
+            text="A custom interface with system controls, lesson tools, settings, and device information."
+          /><IconCard
+            icon="⌁"
+            title="Atlas Boot Manager"
+            text="A Rust UEFI application that presents the Atlas boot experience and starts the documented boot backend."
+          /><IconCard
+            icon="◎"
+            title="Interactive-board-first direction"
+            text="Designed with classroom interactive boards in mind; current hardware evidence remains limited."
+          /><IconCard
+            icon="◌"
+            title="Live Linux environment"
+            text="A USB-bootable Live system for evaluation. An installer and in-place upgrade are not currently provided."
+          /><IconCard
+            icon="⌂"
+            title="Open source"
+            text="Atlas-owned source is published under MIT, with third-party components under their own terms."
+          />
+        </div>
+      </div><div class="content-block split">
+        <div>
+          <span class="eyebrow">Custom Boot Manager</span><h2>
+            An Atlas welcome before Linux starts.
+          </h2><p>
+            The UEFI frontend is written in Rust and uses the system firmware
+            graphics interface. In the validated normal path it starts the GRUB
+            backend, then Linux, Casper Live, Plymouth, and the Atlas session.
+          </p><a class="button button-primary" href="/AtlasOS/screenshots/"
+            >See the visual preview →</a>
+        </div><div class="gallery-image boot-preview">
+          <div class="boot-card">
+            <div class="boot-brand">▲ AtlasOS</div><div
+              class="boot-choice active"
+            >
+              Start AtlasOS Live <span style="float:right">›</span>
+            </div><div class="boot-choice">
+              Advanced options <span style="float:right">›</span>
+            </div><div class="boot-choice">
+              System tools <span style="float:right">›</span>
+            </div>
+          </div>
+        </div>
+      </div><div class="content-block split reverse">
+        <div>
+          <span class="eyebrow">Modern desktop experience</span><h2>
+            Keep the next useful action close.
+          </h2><p>
+            Atlas desktop components provide lesson-oriented navigation,
+            application shortcuts, audio and network status, and dock behavior
+            integrated with the existing session.
+          </p><p>
+            What works can vary by device, connected hardware, and Live-session
+            context.
+          </p>
+        </div><AtlasPreview compact={true} />
+      </div>
+    </div>
+  </section>
+</SiteLayout>
