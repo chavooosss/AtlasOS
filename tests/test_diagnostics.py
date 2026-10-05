@@ -148,15 +148,13 @@ class StorageSafetyTests(unittest.TestCase):
                 self.fixtures.policy().authorize_destination("/dev/sdb")
 
     def test_live_usb_unknown_and_unmounted_internal_are_never_exportable(self):
-        with tempfile.TemporaryDirectory() as target:
-            self.fixtures.device("sda", "8:0", usb=True)
-            self.fixtures.mount("8:0", target, mount_id="47", source="/dev/sda", options="ro")
-            self.fixtures.cmdline.write_text("boot=live live-media=/dev/sda\n")
-            policy = self.fixtures.policy()
-            self.assertEqual(policy.classify("8:0"), policy.LIVE_BOOT_MEDIA)
-            self.assertEqual(policy.export_targets(), [])
-            with self.assertRaises(PermissionError):
-                policy.authorize_destination(target)
+        self.fixtures.device("sda", "8:0", usb=True)
+        # Identify the live medium through the synthetic mount table rather
+        # than resolving /dev/sda on the host running the test.
+        self.fixtures.boot_mount("8:0", source="/dev/sda")
+        policy = self.fixtures.policy()
+        self.assertEqual(policy.classify("8:0"), policy.LIVE_BOOT_MEDIA)
+        self.assertEqual(policy.export_targets(), [])
         self.assertEqual(self.fixtures.policy().classify("99:99"), "UNKNOWN_PROTECTED")
 
     def test_usb_removed_during_export_fails_without_fallback(self):

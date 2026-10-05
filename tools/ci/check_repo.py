@@ -88,8 +88,15 @@ def manifest_source_files(manifest: dict) -> set[str]:
     files: set[str] = set()
     excluded = manifest_patterns(manifest.get("sets", {}).get("EXCLUDE", []))
     for pattern in manifest_patterns(manifest["sets"]["INCLUDE"]):
-        matches = list(ROOT.glob(pattern))
-        file_matches = [path for path in matches if path.is_file()]
+        matches = {path for path in ROOT.glob(pattern) if path.is_file()}
+        # pathlib's handling of a trailing ** differs across supported Python
+        # versions. Expand directory-only matches explicitly so CI and local
+        # publication checks resolve the same candidate set.
+        if pattern.endswith("/**"):
+            base = ROOT / pattern[:-3]
+            if base.is_dir():
+                matches.update(path for path in base.rglob("*") if path.is_file())
+        file_matches = sorted(matches)
         if not file_matches:
             raise ValueError(f"INCLUDE pattern has no source file: {pattern}")
         for path in file_matches:
