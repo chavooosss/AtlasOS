@@ -1,0 +1,116 @@
+Window.SetBackgroundTopColor (0.96, 0.98, 0.99);
+Window.SetBackgroundBottomColor (0.87, 0.93, 0.97);
+
+logo_source = Image ("atlas-logo.png");
+logo_height = Math.Int (Window.GetHeight () * 0.70);
+logo_width = Math.Int (logo_height * logo_source.GetWidth () / logo_source.GetHeight ());
+logo_image = logo_source.Scale (logo_width, logo_height);
+logo_sprite = Sprite (logo_image);
+logo_x = Window.GetX () + Window.GetWidth () / 2 - logo_width / 2;
+logo_y = Window.GetY () + Window.GetHeight () * 0.46 - logo_height / 2;
+logo_sprite.SetX (logo_x);
+logo_sprite.SetY (logo_y);
+logo_sprite.SetZ (2);
+layout_width = Window.GetWidth ();
+layout_height = Window.GetHeight ();
+
+# A soft cyan orbit light sweeps around the fixed emblem. Keeping the logo as
+# one vector-rendered image prevents AI-like morphing or text distortion.
+sweep_source = [
+    Image ("atlas-sweep-00.png"), Image ("atlas-sweep-01.png"), Image ("atlas-sweep-02.png"), Image ("atlas-sweep-03.png"),
+    Image ("atlas-sweep-04.png"), Image ("atlas-sweep-05.png"), Image ("atlas-sweep-06.png"), Image ("atlas-sweep-07.png"),
+    Image ("atlas-sweep-08.png"), Image ("atlas-sweep-09.png"), Image ("atlas-sweep-10.png"), Image ("atlas-sweep-11.png"),
+    Image ("atlas-sweep-12.png"), Image ("atlas-sweep-13.png"), Image ("atlas-sweep-14.png"), Image ("atlas-sweep-15.png"),
+    Image ("atlas-sweep-16.png"), Image ("atlas-sweep-17.png"), Image ("atlas-sweep-18.png"), Image ("atlas-sweep-19.png"),
+    Image ("atlas-sweep-20.png"), Image ("atlas-sweep-21.png"), Image ("atlas-sweep-22.png"), Image ("atlas-sweep-23.png")
+];
+sweep_size = Math.Int (logo_width * 1.08);
+sweep_frames = [];
+for (index = 0; index < 24; index++)
+    sweep_frames[index] = sweep_source[index].Scale (sweep_size, sweep_size);
+sweep_image = sweep_frames[0];
+sweep_sprite = Sprite (sweep_image);
+sweep_sprite.SetX (Window.GetX () + Window.GetWidth () / 2 - sweep_size / 2);
+sweep_sprite.SetY (logo_y + logo_height * 0.37 - sweep_size / 2);
+sweep_sprite.SetZ (1);
+sweep_sprite.SetOpacity (0.86);
+
+refresh_ticks = 0;
+sweep_index = 0;
+logo_opacity = 0;
+fun atlas_refresh_callback ()
+{
+    refresh_ticks++;
+    current_width = Window.GetWidth ();
+    current_height = Window.GetHeight ();
+    if (current_width != layout_width || current_height != layout_height) {
+        layout_width = current_width;
+        layout_height = current_height;
+        logo_height = Math.Int (layout_height * 0.70);
+        logo_width = Math.Int (logo_height * logo_source.GetWidth () / logo_source.GetHeight ());
+        logo_image = logo_source.Scale (logo_width, logo_height);
+        logo_sprite.SetImage (logo_image);
+        logo_x = Window.GetX () + layout_width / 2 - logo_width / 2;
+        logo_y = Window.GetY () + layout_height * 0.46 - logo_height / 2;
+        logo_sprite.SetX (logo_x);
+        logo_sprite.SetY (logo_y);
+        sweep_size = Math.Int (logo_width * 1.08);
+        for (index = 0; index < 24; index++)
+            sweep_frames[index] = sweep_source[index].Scale (sweep_size, sweep_size);
+        sweep_sprite.SetImage (sweep_frames[sweep_index]);
+        sweep_sprite.SetX (Window.GetX () + layout_width / 2 - sweep_size / 2);
+        sweep_sprite.SetY (logo_y + logo_height * 0.37 - sweep_size / 2);
+    }
+    if (refresh_ticks >= 4) {
+        refresh_ticks = 0;
+        sweep_index = (sweep_index + 1) % 24;
+        sweep_sprite.SetImage (sweep_frames[sweep_index]);
+        if (logo_opacity < 1) {
+            logo_opacity = Math.Min (1, logo_opacity + 0.10);
+            logo_sprite.SetOpacity (logo_opacity);
+        }
+    }
+}
+Plymouth.SetRefreshFunction (atlas_refresh_callback);
+
+# casper-stop asks Plymouth to show this prompt before waiting for Enter.
+# Keep it above the splash so the removable-media instruction stays visible.
+message_image = Image.Text ("");
+message_sprite = Sprite ();
+message_sprite.SetImage (message_image);
+message_sprite.SetOpacity (0);
+message_sprite.SetZ (10000);
+usb_message_image = Image ("atlas-usb-message.png");
+usb_message_sprite = Sprite (usb_message_image);
+usb_message_sprite.SetOpacity (0);
+usb_message_sprite.SetZ (10001);
+
+fun atlas_message_callback (message)
+{
+    if (!message || message == "") {
+        message_sprite.SetOpacity (0);
+        usb_message_sprite.SetOpacity (0);
+        return;
+    }
+
+    if (StringString (message, "Please remove the installation medium") != NULL) {
+        usb_message_width = Math.Int (Window.GetWidth () * 0.90);
+        usb_message_height = Math.Int (usb_message_width * usb_message_image.GetHeight () / usb_message_image.GetWidth ());
+        usb_message_scaled = usb_message_image.Scale (usb_message_width, usb_message_height);
+        usb_message_sprite.SetImage (usb_message_scaled);
+        usb_message_sprite.SetX (Window.GetX () + Window.GetWidth () / 2 - usb_message_width / 2);
+        usb_message_sprite.SetY (Window.GetY () + Window.GetHeight () * 0.90 - usb_message_height / 2);
+        usb_message_sprite.SetOpacity (1);
+        message_sprite.SetOpacity (0);
+        return;
+    }
+
+    usb_message_sprite.SetOpacity (0);
+    message_image = Image.Text (message, 0.07, 0.18, 0.29);
+    message_sprite.SetImage (message_image);
+    message_sprite.SetX (Window.GetX () + Window.GetWidth () / 2 - message_image.GetWidth () / 2);
+    message_sprite.SetY (Window.GetY () + Window.GetHeight () * 0.90);
+    message_sprite.SetOpacity (1);
+}
+
+Plymouth.SetMessageFunction (atlas_message_callback);

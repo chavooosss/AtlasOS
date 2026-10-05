@@ -1,0 +1,312 @@
+#!/bin/sh
+set -eu
+
+# A Windows-edited CRLF shebang makes env search for e.g. "python3\r" and
+# prevents AtlasOS from starting. Normalize shipped launchers in the image.
+for launcher in atlasos-ui atlasos-open-request atlasos-window-monitor atlasos-session atlasos-demo-panel atlasos-app-launcher; do
+  path="/usr/local/bin/${launcher}"
+  if [ -f "$path" ]; then
+    sed -i 's/\r$//' "$path"
+  fi
+done
+
+echo "AtlasOS" >/etc/hostname
+cat >/etc/hosts <<'HOSTS'
+127.0.0.1 localhost
+127.0.1.1 atlasos
+
+::1     localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+HOSTS
+
+locale-gen tr_TR.UTF-8 || true
+update-locale LANG=tr_TR.UTF-8 LANGUAGE=tr_TR:tr || true
+ln -sf /usr/share/zoneinfo/Europe/Istanbul /etc/localtime
+cat >/etc/default/keyboard <<'KEYBOARD'
+XKBMODEL="pc105"
+XKBLAYOUT="tr"
+XKBVARIANT=""
+XKBOPTIONS=""
+BACKSPACE="guess"
+KEYBOARD
+mkdir -p /etc/X11/xorg.conf.d
+cat >/etc/X11/xorg.conf.d/00-atlasos-keyboard.conf <<'XKB'
+Section "InputClass"
+    Identifier "AtlasOS Turkish keyboard"
+    MatchIsKeyboard "on"
+    Option "XkbModel" "pc105"
+    Option "XkbLayout" "tr"
+EndSection
+XKB
+localectl set-keymap tr || true
+localectl set-x11-keymap tr pc105 || true
+
+systemctl enable NetworkManager.service || true
+
+chmod +x /usr/local/bin/atlasos-open
+chmod +x /usr/local/bin/atlasos-browser
+chmod +x /usr/local/bin/atlasos-end-lesson
+chmod +x /usr/local/bin/atlasos-demo-panel
+chmod +x /usr/local/bin/atlasos-ui-status
+chmod +x /usr/local/bin/atlasos-session-fix
+chmod +x /usr/local/bin/atlasos-ui
+chmod +x /usr/local/bin/atlasos-open-request
+chmod +x /usr/local/bin/atlasos-session
+chmod +x /usr/local/bin/atlasos-window-monitor
+chmod +x /usr/local/bin/atlasos-app-launcher
+chmod +x /usr/bin/rsvg || true
+chmod +x /usr/share/applications/atlasos-*.desktop || true
+
+update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+  default.plymouth /usr/share/plymouth/themes/atlasos/atlasos.plymouth 120
+update-alternatives --set default.plymouth \
+  /usr/share/plymouth/themes/atlasos/atlasos.plymouth
+update-alternatives --set text.plymouth /usr/share/plymouth/themes/text/text.plymouth
+if [ -x /usr/bin/rsvg-convert ]; then
+  cat >/usr/bin/rsvg <<'RSVG'
+#!/bin/sh
+format=png
+height=
+width=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --format)
+      format="$2"
+      shift 2
+      ;;
+    --height)
+      height="$2"
+      shift 2
+      ;;
+    --width)
+      width="$2"
+      shift 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+input="$1"
+output="$2"
+exec rsvg-convert -f "$format" -h "$height" -w "$width" -o "$output" "$input"
+RSVG
+  chmod +x /usr/bin/rsvg
+fi
+
+mkdir -p /etc/skel/Desktop
+cp /usr/share/applications/atlasos-*.desktop /etc/skel/Desktop/
+chmod +x /etc/skel/Desktop/*.desktop || true
+
+mkdir -p /etc/skel/Ders\ Kitaplari
+cat >/etc/skel/Ders\ Kitaplari/README.txt <<'BOOKS'
+AtlasOS ders kitaplari klasoru.
+
+Ilerleyen surumlerde kurulumda secilen sinif ve bransa gore resmi kaynaklar
+bu alana indirilebilir veya baglanabilir.
+BOOKS
+
+mkdir -p /etc/lightdm
+rm -f /etc/lightdm/lightdm.conf.d/50-atlasos-live.conf
+cat >/etc/lightdm/lightdm.conf <<'LIGHTDM'
+[Seat:*]
+autologin-user=atlas
+autologin-user-timeout=0
+allow-guest=false
+greeter-hide-users=false
+greeter-show-manual-login=false
+user-session=atlasos
+greeter-session=lightdm-gtk-greeter
+LIGHTDM
+
+cat >/usr/local/sbin/atlasos-live-account <<'ACCOUNT'
+#!/bin/sh
+set -eu
+
+if ! id -u atlas >/dev/null 2>&1; then
+  useradd --create-home --shell /bin/bash atlas
+fi
+
+usermod --home /home/atlas --shell /bin/bash atlas
+install -d -m 0750 -o atlas -g atlas /home/atlas
+cp -an /etc/skel/. /home/atlas/
+chown -R atlas:atlas /home/atlas
+
+usermod --password '$6$tFa.UpV9aLGz6dUy$u8MpSpfLCwkwe.kZscbeilr1oquuStGPbotoAs/Y3c0WWK1jJu.z7aMAiJFnTnqlICTNlSUF2.duvUe2zvHpk0' atlas
+
+install -d -m 0755 /var/lib/AccountsService/users
+cat >/var/lib/AccountsService/users/atlas <<'ACCOUNTSERVICE'
+[User]
+Session=atlasos
+XSession=atlasos
+SystemAccount=false
+ACCOUNTSERVICE
+chmod 0644 /var/lib/AccountsService/users/atlas
+
+cat >/home/atlas/.dmrc <<'DMRC'
+[Desktop]
+Session=atlasos
+DMRC
+chown atlas:atlas /home/atlas/.dmrc
+chmod 0644 /home/atlas/.dmrc
+ACCOUNT
+chmod 0755 /usr/local/sbin/atlasos-live-account
+
+cat >/etc/systemd/system/atlasos-live-account.service <<'UNIT'
+[Unit]
+Description=Prepare the AtlasOS live login account
+After=local-fs.target
+Before=display-manager.service lightdm.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/atlasos-live-account
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
+UNIT
+mkdir -p /etc/systemd/system/graphical.target.wants
+ln -sfn ../atlasos-live-account.service /etc/systemd/system/graphical.target.wants/atlasos-live-account.service
+
+printf '%s\n' 'shared/default-x-display-manager select lightdm' | debconf-set-selections
+DEBIAN_FRONTEND=noninteractive apt-get purge -y gdm3
+DEBIAN_FRONTEND=noninteractive dpkg-reconfigure lightdm
+printf '%s\n' /usr/sbin/lightdm >/etc/X11/default-display-manager
+ln -sfn /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
+
+mkdir -p /etc/xdg/autostart
+chmod 0644 /etc/xdg/autostart/atlasos-ui-status.desktop 2>/dev/null || true
+chmod 0644 /etc/systemd/system/apparmor.service.d/atlasos-live.conf 2>/dev/null || true
+
+# Casper normally gives the live account unrestricted passwordless sudo.
+# Replace it with one no-argument, read-only diagnostics entry point.
+casper_adduser=/usr/share/initramfs-tools/scripts/casper-bottom/25adduser
+if [ -f "$casper_adduser" ]; then
+  python3 - "$casper_adduser" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+source = path.read_text(encoding="utf-8")
+old = 'echo "${USERNAME}  ALL=(ALL) NOPASSWD: ALL" > /root/etc/sudoers.d/casper'
+new = '''chroot /root gpasswd -d "$USERNAME" sudo >/dev/null 2>&1 || true
+chroot /root gpasswd -d "$USERNAME" admin >/dev/null 2>&1 || true
+printf '%s ALL=(root) NOPASSWD: /usr/local/libexec/atlasos-privileged-diagnostics ""\\n' "$USERNAME" > /root/etc/sudoers.d/casper
+chmod 0440 /root/etc/sudoers.d/casper'''
+if source.count(old) != 1:
+    raise SystemExit("Unexpected Casper sudoers implementation; refusing unsafe patch")
+path.write_text(source.replace(old, new), encoding="utf-8")
+PY
+fi
+
+install -d -m 0755 /usr/local/libexec
+chmod 0755 /usr/local/libexec/atlasos-privileged-diagnostics
+cat >/etc/xdg/autostart/atlasos-keyboard.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=AtlasOS Turkish Keyboard
+Comment=Use Turkish keyboard layout in the live session
+Exec=sh -c "sleep 2; atlasos-session-fix"
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+DESKTOP
+
+cat >/etc/xdg/autostart/nm-applet.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Network
+Comment=Show network controls in the live session
+Exec=nm-applet
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+DESKTOP
+
+mkdir -p /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
+cat >/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml <<'VOLMAN'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="thunar-volman" version="1.0">
+  <property name="automount-media" type="empty">
+    <property name="enabled" type="bool" value="true"/>
+  </property>
+  <property name="automount-drives" type="empty">
+    <property name="enabled" type="bool" value="true"/>
+  </property>
+  <property name="autobrowse" type="empty">
+    <property name="enabled" type="bool" value="false"/>
+  </property>
+</channel>
+VOLMAN
+
+cat >/etc/xdg/autostart/atlasos-removable-media.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=AtlasOS removable media
+Exec=thunar --daemon
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true
+DESKTOP
+
+cat >/etc/xdg/autostart/atlasos-demo-panel.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=AtlasOS Demo Panel
+Comment=Open the AtlasOS classroom dashboard
+Exec=atlasos-demo-panel
+OnlyShowIn=AtlasOS;
+X-GNOME-Autostart-enabled=true
+DESKTOP
+
+mkdir -p /etc/xdg
+cat >/etc/xdg/mimeapps.list <<'MIME'
+[Default Applications]
+x-scheme-handler/atlasos=atlasos-url.desktop
+x-scheme-handler/http=atlasos-browser.desktop
+x-scheme-handler/https=atlasos-browser.desktop
+text/html=atlasos-browser.desktop
+application/xhtml+xml=atlasos-browser.desktop
+MIME
+
+mkdir -p /usr/share/applications
+cat >/usr/share/applications/atlasos-browser.desktop <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Web Tarayıcısı
+Comment=AtlasOS web browser launcher
+Exec=atlasos-browser %u
+Icon=web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;application/xhtml+xml;
+DESKTOP
+
+mkdir -p /usr/share/xfce4/helpers
+cat >/usr/share/xfce4/helpers/atlasos-browser.desktop <<'DESKTOP'
+[Desktop Entry]
+NoDisplay=true
+Version=1.0
+Type=X-XFCE-Helper
+Name=Web Tarayıcısı
+X-XFCE-Category=WebBrowser
+X-XFCE-Commands=atlasos-browser
+X-XFCE-CommandsWithParameter=atlasos-browser "%s"
+Icon=web-browser
+DESKTOP
+
+mkdir -p /etc/skel/.config/xfce4
+cat >/etc/skel/.config/xfce4/helpers.rc <<'HELPERS'
+WebBrowser=atlasos-browser
+FileManager=Thunar
+TerminalEmulator=xfce4-terminal
+HELPERS
+
+mkdir -p /etc/xdg/xfce4/xinitrc.d
+cat >/etc/xdg/xfce4/xinitrc.d/50-atlasos-session-fix <<'XINIT'
+#!/bin/sh
+atlasos-session-fix || true
+XINIT
+chmod +x /etc/xdg/xfce4/xinitrc.d/50-atlasos-session-fix
+
+# Refresh after applying the Casper sudoers restriction above.
+update-initramfs -u -k all

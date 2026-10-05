@@ -1,0 +1,67 @@
+# Live-build and ISO outputs
+/build/
+/dist/
+/binary/
+/chroot/
+
+# Rust build output and Python caches
+/target/
+**/target/
+__pycache__/
+*.py[cod]
+
+# Generated media and validation captures
+*.iso
+*.img
+*.efi
+*.ppm
+*.squashfs
+*.deb
+*.zip
+*.tar
+*.tar.*
+*.7z
+*.rar
+*.qcow2
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.ova
+*.ovf
+*.vbox
+*.vbox-prev
+*.vmem
+*.vmsd
+*.vmsn
+*.vmsw
+*.nvram
+*.raw
+*.log
+*.log.*
+*.tmp
+*.bak
+*.core
+*.dump
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Local editor / OS metadata
+.vscode/
+.idea/
+.codex/
+.cursor/
+.agents/
+.DS_Store
+Thumbs.db
+
+# Local credentials and private key containers
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*

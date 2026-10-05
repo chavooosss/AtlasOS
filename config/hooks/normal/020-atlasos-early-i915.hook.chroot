@@ -1,0 +1,75 @@
+#!/bin/sh
+set -eu
+
+hook_dir=/etc/initramfs-tools/hooks
+init_top_dir=/etc/initramfs-tools/scripts/init-top
+install -d -m 0755 "$hook_dir" "$init_top_dir"
+
+cat >"$hook_dir/atlasos-early-i915" <<'HOOK'
+#!/bin/sh
+set -eu
+
+PREREQ=""
+case "${1:-}" in
+    prereqs) printf '%s\n' "$PREREQ"; exit 0 ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+copy_once() {
+    copy_file "$1" "$2" || {
+        status=$?
+        [ "$status" -eq 1 ] || return "$status"
+    }
+}
+
+# Resolve dependencies for this kernel via modprobe. Copy these modules
+# directly so initramfs-tools does not include every platform's optional
+# GuC/HuC firmware listed in i915's module metadata.
+module_paths=$(modprobe --set-version "$version" --ignore-install --show-depends i915 \
+    | awk '$1 == "insmod" { print $2 }')
+[ -n "$module_paths" ] || {
+    echo "AtlasOS early i915: modprobe returned no module files" >&2
+    exit 1
+}
+
+for module_path in $module_paths; do
+    [ -r "$module_path" ] || {
+        echo "AtlasOS early i915: required module is missing: $module_path" >&2
+        exit 1
+    }
+    copy_once module "$module_path"
+done
+
+# Include only the platform DMC firmware needed by the two physical targets.
+# GuC/HuC remain optional and outside this KMS experiment.
+for firmware in \
+    /lib/firmware/i915/icl_dmc_ver1_09.bin.zst \
+    /lib/firmware/i915/kbl_dmc_ver1_04.bin.zst; do
+    [ -r "$firmware" ] || {
+        echo "AtlasOS early i915: required platform DMC firmware is missing: $firmware" >&2
+        exit 1
+    }
+    copy_once firmware "$firmware"
+done
+HOOK
+
+cat >"$init_top_dir/atlasos-early-i915" <<'INIT'
+#!/bin/sh
+set -u
+
+PREREQ="udev"
+case "${1:-}" in
+    prereqs) printf '%s\n' "$PREREQ"; exit 0 ;;
+esac
+
+# Load before init-premount, where the existing Plymouth script starts.
+# A failed probe must not prevent Casper from booting; the kernel log records
+# the failure and the normal rootfs udev path can retry later.
+if ! modprobe i915; then
+    printf '<3>AtlasOS early i915: modprobe failed; continuing Live boot\n' >/dev/kmsg 2>/dev/null || true
+fi
+INIT
+
+chmod 0755 "$hook_dir/atlasos-early-i915" "$init_top_dir/atlasos-early-i915"
+update-initramfs -u -k all

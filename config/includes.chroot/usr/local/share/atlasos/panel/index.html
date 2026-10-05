@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AtlasOS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand">AtlasOS</div>
+    <a href="#home">Ana Sayfa</a>
+    <a href="atlasos://books">Dosyalar</a>
+    <a href="#tools">Ders Araçları</a>
+    <span class="disabled">Ayarlar <small>Yakında</small></span>
+    <span class="disabled">Yardım <small>Yakında</small></span>
+  </aside>
+
+  <main class="workspace" id="home">
+    <header class="topbar">
+      <div>
+        <h1>Derse Hazır</h1>
+        <p>Kitaplığınız ve ders araçlarınız burada.</p>
+      </div>
+    </header>
+
+    <section>
+      <div class="section-title">
+        <h2>Ders Kitaplari</h2>
+      </div>
+      <div class="grid one">
+        <a class="card red" href="atlasos://books">
+          <span class="icon">K</span>
+          <strong>Kitapligi Ac</strong>
+          <small>Bu cihazdaki ders dosyaları</small>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-title">
+        <h2>MEB Kaynaklari</h2>
+      </div>
+      <div class="grid three">
+        <a class="card green" href="https://www.eba.gov.tr/">
+          <span class="icon">E</span>
+          <strong>EBA</strong>
+          <small>Dijital ders icerikleri</small>
+        </a>
+        <a class="card teal" href="https://ogmmateryal.eba.gov.tr/">
+          <span class="icon">O</span>
+          <strong>OGM Materyal</strong>
+          <small>Zengin egitim materyalleri</small>
+        </a>
+        <a class="card blue" href="https://mebi.eba.gov.tr/">
+          <span class="icon">M</span>
+          <strong>MEBI</strong>
+          <small>Konu anlatimlari ve etkinlikler</small>
+        </a>
+      </div>
+    </section>
+
+    <section id="tools">
+      <div class="section-title">
+        <h2>Ders Araclari</h2>
+      </div>
+      <div class="grid tools">
+        <a class="card red" href="atlasos://pdf"><span class="icon">P</span><strong>PDF Ac</strong><small>PDF dosyalarini goruntule</small></a>
+        <a class="card amber" href="atlasos://presentation"><span class="icon">S</span><strong>Sunum Ac</strong><small>Slayt ve sunum dosyalari</small></a>
+        <a class="card blue" href="atlasos://video"><span class="icon">V</span><strong>Video Ac</strong><small>Video dosyalarini oynat</small></a>
+        <a class="card green" href="atlasos://whiteboard"><span class="icon">T</span><strong>Beyaz Tahta</strong><small>Yaz, ciz ve anlat</small></a>
+        <div class="card cyan unavailable" aria-disabled="true"><span class="icon">C</span><strong>Ekrana Çiz</strong><small>Yakında</small></div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="lesson">
+    <h2>Ders Oturumu</h2>
+    <div class="now">
+      <h3>AtlasOS Live</h3>
+      <p>Geçici demo oturumu</p>
+    </div>
+    <a class="finish" href="atlasos://finish">Dersi Bitir</a>
+  </aside>
+</body>
+</html>

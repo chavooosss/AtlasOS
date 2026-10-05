@@ -1,0 +1,6 @@
+abi <abi/5.0>,
+include <tunables/global>
+
+profile atlasos-ui /usr/local/bin/atlasos-ui flags=(unconfined) {
+  userns,
+}

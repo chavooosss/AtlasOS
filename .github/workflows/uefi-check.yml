@@ -1,0 +1,29 @@
+name: Optional UEFI compile check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uefi:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-boot
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-uefi
+      - name: Build UEFI frontend (no ISO integration)
+        run: cargo build --locked --release --no-default-features --features uefi-app --target x86_64-unknown-uefi --bin AtlasBootManager
+      - name: Validate PE/COFF UEFI image
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y grub-common
+          grub-file --is-x86_64-efi target/x86_64-unknown-uefi/release/AtlasBootManager.efi

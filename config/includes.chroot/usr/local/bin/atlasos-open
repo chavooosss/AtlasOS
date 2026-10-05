@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+target="${1:-home}"
+target="${target#atlasos://}"
+
+log_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/atlasos"
+mkdir -p "${log_dir}"
+log="${log_dir}/tools.log"
+
+show_error() {
+  printf '%s\n' "$1" >>"${log}"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --title="AtlasOS" --text="$(printf '%s\n\nAyrintilar: %s' "$1" "$log")" >/dev/null 2>&1 || true
+  fi
+  printf '%s\n' "$1 (ayrintilar: ${log})" >&2
+}
+
+launch() {
+  label="$1"
+  shift
+  if "$@" >>"${log}" 2>&1; then
+    return 0
+  else
+    status=$?
+    show_error "${label} acilamadi (hata kodu: ${status})."
+    return "${status}"
+  fi
+}
+
+open_url() {
+  atlasos-browser "$1"
+}
+
+case "${target}" in
+  open-file\?*|browser\?*)
+    exec atlasos-open-request "${target}"
+    ;;
+  eba)
+    open_url "https://www.eba.gov.tr/"
+    ;;
+  ogm)
+    open_url "https://ogmmateryal.eba.gov.tr/"
+    ;;
+  mebi)
+    open_url "https://mebi.eba.gov.tr/"
+    ;;
+  books)
+    launch "Ders Kitaplari" thunar "${HOME}/Ders Kitaplari"
+    ;;
+  whiteboard)
+    launch "Beyaz Tahta" xournalpp
+    ;;
+  pdf)
+    file="$(zenity --file-selection --title="PDF Sec" --file-filter="PDF | *.pdf" --file-filter="Tum dosyalar | *")" || exit 0
+    launch "PDF" evince "${file}"
+    ;;
+  presentation)
+    file="$(zenity --file-selection --title="Sunum Sec" --file-filter="Sunumlar | *.odp *.ppt *.pptx" --file-filter="Tum dosyalar | *")" || exit 0
+    launch "Sunum" libreoffice --impress "${file}"
+    ;;
+  video)
+    file="$(zenity --file-selection --title="Video Sec" --file-filter="Videolar | *.mp4 *.mkv *.webm *.avi" --file-filter="Tum dosyalar | *")" || exit 0
+    launch "Video" vlc "${file}"
+    ;;
+  panel|home)
+    exec env QML_XHR_ALLOW_FILE_READ=1 atlasos-ui
+    ;;
+  finish)
+    launch "Dersi Bitir" atlasos-end-lesson
+    ;;
+  power)
+    launch "Kapat" systemctl poweroff
+    ;;
+  *)
+    show_error "Bu kisayol henuz hazir degil: ${target}"
+    exit 2
+    ;;
+esac

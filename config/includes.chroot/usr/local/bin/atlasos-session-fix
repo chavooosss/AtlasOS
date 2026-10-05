@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{
+  echo "AtlasOS session fix: $(date)"
+  setxkbmap -model pc105 -layout tr || true
+  xfconf-query -c keyboard-layout -p /Default/XkbDisable -n -t bool -s false || true
+  xfconf-query -c keyboard-layout -p /Default/XkbLayout -n -t string -s tr || true
+  xfconf-query -c keyboard-layout -p /Default/XkbVariant -n -t string -s "" || true
+  xfconf-query -c xfce4-session -p /general/SaveOnExit -n -t bool -s false || true
+} >/tmp/atlasos-session-fix.log 2>&1

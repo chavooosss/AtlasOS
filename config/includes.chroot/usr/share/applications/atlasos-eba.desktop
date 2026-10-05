@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=EBA
+Comment=EBA dijital ders icerikleri
+Exec=atlasos-open eba
+Icon=applications-internet
+Terminal=false
+Categories=Education;Network;

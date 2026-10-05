@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+"""Fixed, read-only kernel and boot journal capture for AtlasOS diagnostics."""
+import json
+import os
+import subprocess
+import sys
+
+
+OPERATIONS = {
+    "dmesg": ("/usr/bin/dmesg", "--time-format=raw"),
+    "journal_current": (
+        "/usr/bin/journalctl", "--quiet", "--no-pager", "--output=short-monotonic",
+        "--boot=0", "--lines=12000",
+    ),
+}
+MAX_OUTPUT_BYTES = 2 * 1024 * 1024
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv or os.geteuid() != 0:
+        return 2
+
+    result = {"schema_version": 1, "operations": {}}
+    for name, command in OPERATIONS.items():
+        try:
+            completed = subprocess.run(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=20,
+                check=False,
+                shell=False,
+                env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"},
+            )
+            stdout = completed.stdout or ""
+            stderr = completed.stderr or ""
+            if len(stdout.encode("utf-8", "replace")) > MAX_OUTPUT_BYTES:
+                stdout = stdout.encode("utf-8", "replace")[:MAX_OUTPUT_BYTES].decode("utf-8", "replace")
+                stdout += "\n[later output truncated by fixed size limit]\n"
+            if len(stderr.encode("utf-8", "replace")) > 16384:
+                stderr = stderr[-16384:]
+            result["operations"][name] = {
+                "returncode": completed.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+            }
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            result["operations"][name] = {
+                "returncode": 1,
+                "stdout": "",
+                "stderr": type(exc).__name__,
+            }
+    sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

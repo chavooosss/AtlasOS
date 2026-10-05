@@ -1,0 +1,46 @@
+name: Hardware compatibility report
+description: Report a specific AtlasOS hardware test result.
+title: "[Hardware]: "
+labels: [hardware]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: AtlasOS version
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model (no serial number)
+    validations:
+      required: true
+  - type: input
+    id: cpu_gpu
+    attributes:
+      label: CPU and GPU
+    validations:
+      required: true
+  - type: input
+    id: boot_display
+    attributes:
+      label: Boot mode and display resolution
+      placeholder: UEFI; 1920 x 1080
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Test state
+      options:
+        - Live USB
+        - Installed
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Steps, result, and evidence
+      description: Do not include serial numbers, MAC addresses, school network details, or other private identifiers.
+    validations:
+      required: true

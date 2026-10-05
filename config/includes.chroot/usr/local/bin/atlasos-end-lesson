@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v zenity >/dev/null 2>&1; then
+  zenity --question \
+    --title="AtlasOS - Dersi Bitir" \
+    --text="AtlasOS demo gecici klasorlerini temizlemek istiyor musunuz?" \
+    --ok-label="Dersi Bitir" \
+    --cancel-label="Vazgec" || exit 0
+fi
+
+rm -rf "${HOME}/.cache/atlasos-session" 2>/dev/null || true
+rm -rf "${HOME}/İndirilenler/atlasos-gecici" 2>/dev/null || true
+rm -rf "${HOME}/Downloads/atlasos-temp" 2>/dev/null || true
+
+if command -v zenity >/dev/null 2>&1; then
+  zenity --info \
+    --title="AtlasOS" \
+    --text="Demo gecici klasorleri temizlendi. Live oturum acik kaliyor." || true
+fi

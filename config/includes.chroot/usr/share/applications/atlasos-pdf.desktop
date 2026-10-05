@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PDF Ac
+Comment=PDF dosyalarini goruntule
+Exec=atlasos-open pdf
+Icon=application-pdf
+Terminal=false
+Categories=Education;Office;

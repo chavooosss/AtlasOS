@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+url="${1:-about:blank}"
+log_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/atlasos"
+mkdir -p "${log_dir}"
+log="${log_dir}/browser.log"
+
+show_error() {
+  printf '%s\n' "$1" >>"${log}"
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --title="AtlasOS" --text="$(printf '%s\n\nAyrintilar: %s' "$1" "$log")" >/dev/null 2>&1 || true
+  fi
+  printf '%s (ayrintilar: %s)\n' "$1" "${log}" >&2
+}
+
+browser=""
+for candidate in chromium chromium-browser firefox; do
+  if command -v "${candidate}" >/dev/null 2>&1; then
+    browser="$(command -v "${candidate}")"
+    break
+  fi
+done
+
+{
+  echo "==== $(date -Is) ===="
+  echo "URL: ${url}"
+  echo "DISPLAY: ${DISPLAY:-}"
+  echo "XDG_SESSION_TYPE: ${XDG_SESSION_TYPE:-}"
+  echo "Selected browser: ${browser:-none}"
+} >>"${log}" 2>&1
+
+if [[ -z "${browser}" ]]; then
+  show_error "Harici web tarayıcısı yüklü değil. AtlasOS içi web görünümünü kullanabilirsiniz."
+  exit 127
+fi
+
+# Serialize rapid duplicate requests; retry one transient SIGKILL/137 exit.
+exec 9>"${log_dir}/browser-launch.lock"
+if ! flock -w 20 9; then
+  show_error "Web tarayıcısı başlatılıyor. Birkaç saniye sonra yeniden deneyin."
+  exit 75
+fi
+
+for attempt in 1 2; do
+  if "${browser}" "${url}" >>"${log}" 2>&1; then
+    exit 0
+  else
+    status=$?
+  fi
+
+  printf 'Browser launch attempt %s exited with status %s\n' "${attempt}" "${status}" >>"${log}"
+  if [[ "${status}" == "137" && "${attempt}" == "1" ]]; then
+    sleep 2
+    continue
+  fi
+  show_error "Web tarayıcısı açılamadı (hata kodu: ${status})."
+  exit "${status}"
+done

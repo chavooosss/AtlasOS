@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Video Ac
+Comment=Video dosyalarini oynat
+Exec=atlasos-open video
+Icon=video-x-generic
+Terminal=false
+Categories=Education;AudioVideo;

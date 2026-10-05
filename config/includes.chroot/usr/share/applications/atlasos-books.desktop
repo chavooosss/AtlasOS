@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ders Kitaplari
+Comment=Sinifa gore ders kitaplari ve kaynaklar
+Exec=atlasos-open books
+Icon=folder-documents
+Terminal=false
+Categories=Education;

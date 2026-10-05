@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sunum Ac
+Comment=Sunum dosyalarini ac
+Exec=atlasos-open presentation
+Icon=x-office-presentation
+Terminal=false
+Categories=Education;Office;

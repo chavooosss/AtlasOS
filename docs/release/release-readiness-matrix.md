@@ -1,0 +1,11 @@
+# 0.6.2 release rights and integrity matrix
+
+Evidence reviewed 2026-10-05. `BLOCKED` means a stated condition is not met; `CONDITIONAL` means publication depends on an explicit action. Physical results are user-reported unless stated otherwise.
+
+| Candidate | Rights status | Artifact integrity | Physical validation | Virtual validation | Release suitability |
+|---|---|---|---|---|---|
+| Source repository | Root MIT covers AtlasOS-owned code; atlas-boot keeps scoped `MIT OR Apache-2.0`; owner-authorized AI visual assets have separate status; startup audio remains excluded | No Git history/commit provenance; current boot visuals are present in the candidate; provider terms for visual assets remain unverified | N/A | CI and source checks recorded in G5/G6 | **CONDITIONAL** — owner project-distribution permission recorded; provider/model terms for visual assets and startup WAV provenance/plan remain unresolved. |
+| Physical 0.6.2 ISO, `670031830f191edaaeaa6cca32233bf56f416bc666cb2af69a0ce296caa1b5d8` | **BLOCKED** — contains Chrome and rights-uncleared Atlas artwork/audio; exact package notices/source duties not mapped | Whole-image hash verified; embedded list 22/25, three explained stale rows, boot-critical omissions | One laptop UEFI Live boot to desktop, user-reported | No virtual result claimed for this exact artifact | **HISTORICAL ONLY; DO NOT PUBLISH.** |
+| G4.1 engineering candidate, `89523905f3e04814db2b6d0c34d141a45af8f0b50cef2dfc9dda72a5ffc1a492` | **UNVERIFIED / not cleared** — historical candidate is not proven to match cleaned package/build config; Atlas artwork and exact package obligations remain unresolved | Historical G4.1 evidence: 23/23 embedded rows and structural UEFI checks passed; do not infer exact current-source reproducibility | Not physically validated | QEMU/OVMF reached Live desktop | **INTERNAL ONLY**; a future cleaned candidate needs a fresh build and independent validation. |
+
+No candidate is approved for public binary distribution. The physical ISO's checksum caveat is separately documented, but its Chrome and asset rights blockers independently make it unsuitable. See [license decision 0002](decisions/0002-license-readiness.md) and [manifest decision 0003](decisions/0003-physical-iso-manifest.md).

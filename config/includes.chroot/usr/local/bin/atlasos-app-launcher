@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+app="${1:-}"
+case "$app" in kig|kalzium|step) ;; *) echo "Unsupported Atlas lesson app" >&2; exit 64;; esac
+mode="${ATLASOS_DISPLAY_MODE:-auto}"
+if [[ "$mode" == board ]]; then export QT_SCALE_FACTOR=1.25; fi
+exec "$app"

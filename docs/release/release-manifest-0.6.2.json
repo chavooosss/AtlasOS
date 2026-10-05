@@ -1,0 +1,45 @@
+{
+  "schema": "atlasos-release-manifest-v1",
+  "project": "AtlasOS",
+  "version": "0.6.2",
+  "maturity": "Development Preview",
+  "release_description": "Physical Validation Build",
+  "architecture": "x86_64",
+  "artifact": {
+    "filename": "AtlasOS-0.6.2-live-amd64.iso",
+    "size_bytes": 3471966208,
+    "sha256": "670031830f191edaaeaa6cca32233bf56f416bc666cb2af69a0ce296caa1b5d8",
+    "selection": "historical validation artifact only; not a public binary candidate"
+  },
+  "source_commit": "unavailable; pre-publication baseline, Git not initialized",
+  "build_date": "unavailable for this protected historical artifact",
+  "source_binary_relationship": "not proven bit-for-bit reproducible from the current source baseline",
+  "embedded_checksum_manifest": {
+    "status": "stale-and-incomplete; not passing",
+    "rows_total": 25,
+    "rows_pass": 22,
+    "rows_fail": 3,
+    "failed_paths": ["EFI/BOOT/BOOTX64.EFI", "boot/grub/efi.img", "isolinux/boot.cat"],
+    "severity": "release-note-worthy; failures match documented EFI replacements and El Torito remaster",
+    "coverage_gaps": ["EFI/BOOT/ATLASGRUB.EFI", "isolinux/isolinux.bin", "El Torito boot-image entries"],
+    "whole_iso_sha256_is_separate": true
+  },
+  "rights": {
+    "project_license": "MIT for AtlasOS-owned source only; atlas-boot retains MIT OR Apache-2.0",
+    "source_publication": "conditional; owner-authorized AI visual assets are included with separate provenance records; provider terms remain unverified; startup WAV and branded reference screenshots are excluded",
+    "binary_publication": "not public; historical image contains Chrome and uncleared artwork/audio; future candidate needs exact package notices/source review and physical validation"
+  },
+  "boot_policy": {
+    "primary": "UEFI",
+    "legacy_bios": "best-effort; currently unsupported or unvalidated for new-build release gating; not release-gating",
+    "secure_boot": "not validated"
+  },
+  "validation": {
+    "physical": "user-reported UEFI Live boot to desktop on one laptop; applies only to this exact artifact and recorded path",
+    "virtual": "not claimed for this artifact; separate G4.1 candidate reached Live desktop in QEMU/OVMF",
+    "broad_hardware_matrix": "not validated"
+  },
+  "upgrade": "no installer or established in-place upgrade path",
+  "signing": "checksum-only; no maintained signing identity established",
+  "publication": "not published; binary rights review pending; no GitHub release created"
+}

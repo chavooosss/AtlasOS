@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Beyaz Tahta
+Comment=Yaz, ciz ve anlat
+Exec=atlasos-open whiteboard
+Icon=accessories-text-editor
+Terminal=false
+Categories=Education;Graphics;

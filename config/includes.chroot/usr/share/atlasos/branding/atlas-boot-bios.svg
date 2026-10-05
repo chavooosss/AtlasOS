@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1">
+      <stop stop-color="#f4f9fc"/>
+      <stop offset="1" stop-color="#dceaf3"/>
+    </linearGradient>
+    <radialGradient id="halo">
+      <stop stop-color="#23a9d4" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#23a9d4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x2="0" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f8fbfd"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <circle cx="512" cy="220" r="260" fill="url(#halo)"/>
+  <g fill="none" stroke="#347895" stroke-opacity=".12" stroke-width="1">
+    <path d="M400 0v480M440 0v480M480 0v480M520 0v480M560 0v480M600 0v480"/>
+    <path d="M360 40h280M360 80h280M360 120h280M360 160h280M360 200h280M360 240h280M360 280h280M360 320h280M360 360h280M360 400h280M360 440h280"/>
+  </g>
+  <rect x="426" y="58" width="188" height="238" rx="22" fill="#12324a" fill-opacity=".12"/>
+  <rect x="422" y="54" width="188" height="238" rx="22" fill="url(#card)" stroke="#ffffff" stroke-width="2"/>
+  <text x="516" y="258" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="21" font-weight="700" fill="#102d49">AtlasOS</text>
+  <text x="516" y="278" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="7" letter-spacing="1.7" fill="#527086">CANLI OTURUM</text>
+</svg>

@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+import json
+import os
+import select
+import base64
+import struct
+import sys
+import zlib
+
+from Xlib import X, display, error, protocol
+
+
+class WindowMonitor:
+    def __init__(self):
+        self.display = display.Display()
+        self.root = self.display.screen().root
+        self.atoms = {name: self.display.intern_atom(name) for name in (
+            "_NET_CLIENT_LIST", "_NET_ACTIVE_WINDOW", "_NET_WM_NAME", "UTF8_STRING",
+            "_NET_WM_PID", "_NET_WM_STATE", "_NET_WM_STATE_SKIP_TASKBAR",
+            "_NET_WM_STATE_HIDDEN", "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_NORMAL",
+            "_NET_WM_WINDOW_TYPE_DIALOG", "_NET_WM_ICON", "_NET_CLOSE_WINDOW",
+            "WM_CLASS", "WM_STATE",
+        )}
+
+    def property(self, window, name):
+        try:
+            return window.get_full_property(self.atoms[name], X.AnyPropertyType)
+        except (error.BadWindow, error.BadAtom):
+            return None
+
+    def windows(self):
+        clients = self.property(self.root, "_NET_CLIENT_LIST")
+        active = self.property(self.root, "_NET_ACTIVE_WINDOW")
+        active_id = int(active.value[0]) if active is not None and len(active.value) else None
+        result = []
+        for xid in clients.value if clients is not None else ():
+            window = self.display.create_resource_object("window", int(xid))
+            pid = self.property(window, "_NET_WM_PID")
+            if pid is not None and len(pid.value) and int(pid.value[0]) == os.getppid():
+                continue
+            state = self.property(window, "_NET_WM_STATE")
+            if state is not None and self.atoms["_NET_WM_STATE_SKIP_TASKBAR"] in state.value:
+                continue
+            minimized = state is not None and self.atoms["_NET_WM_STATE_HIDDEN"] in state.value
+            wm_state = self.property(window, "WM_STATE")
+            if wm_state is not None and len(wm_state.value):
+                minimized = minimized or int(wm_state.value[0]) == 3
+            kind = self.property(window, "_NET_WM_WINDOW_TYPE")
+            if kind is not None and not any(value in kind.value for value in (
+                self.atoms["_NET_WM_WINDOW_TYPE_NORMAL"], self.atoms["_NET_WM_WINDOW_TYPE_DIALOG"]
+            )):
+                continue
+            name = self.property(window, "_NET_WM_NAME")
+            title = bytes(name.value).decode("utf-8", "replace") if name is not None else "Uygulama"
+            class_property = self.property(window, "WM_CLASS")
+            window_class = ""
+            if class_property is not None:
+                try:
+                    fields = bytes(class_property.value).decode("utf-8", "replace").split("\0")
+                    window_class = (fields[-2] if len(fields) > 1 else fields[0]).casefold()
+                except (TypeError, ValueError):
+                    window_class = ""
+            icon = self.icon_for(window_class, title)
+            icon_data = self.icon_data_url(window)
+            result.append({"id": str(int(xid)), "title": title or "Uygulama", "active": int(xid) == active_id,
+                           "minimized": minimized, "icon": icon, "iconData": icon_data, "class": window_class})
+        return result
+
+    def icon_data_url(self, window):
+        """Return the window manager's real _NET_WM_ICON as a small PNG data URL."""
+        prop = self.property(window, "_NET_WM_ICON")
+        if prop is None or len(prop.value) < 3:
+            return ""
+        values = prop.value
+        best = None
+        index = 0
+        while index + 2 < len(values):
+            width, height = int(values[index]), int(values[index + 1])
+            start = index + 2
+            count = width * height
+            if width < 1 or height < 1 or count > 4_194_304 or start + count > len(values):
+                break
+            score = abs(max(width, height) - 64)
+            if best is None or score < best[0]:
+                best = (score, width, height, values[start:start + count])
+            index = start + count
+        if best is None:
+            return ""
+        _, source_width, source_height, pixels = best
+        size = 64
+        rows = bytearray()
+        for y in range(size):
+            rows.append(0)  # PNG filter: None
+            source_y = min(source_height - 1, y * source_height // size)
+            for x in range(size):
+                source_x = min(source_width - 1, x * source_width // size)
+                argb = int(pixels[source_y * source_width + source_x])
+                rows.extend(((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, (argb >> 24) & 255))
+
+        def chunk(kind, data):
+            payload = kind + data
+            return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xffffffff)
+
+        png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">2I5B", size, size, 8, 6, 0, 0, 0))
+               + chunk(b"IDAT", zlib.compress(bytes(rows), 6)) + chunk(b"IEND", b""))
+        return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+
+    @staticmethod
+    def icon_for(window_class, title):
+        identity = (window_class + " " + title).casefold()
+        known = (
+            (("chromium", "firefox", "browser"), "browser"),
+            (("libreoffice", "writer", "impress", "calc"), "office"),
+            (("evince", "atril", "document viewer"), "pdf"),
+            (("vlc", "video"), "video"),
+            (("thunar", "file manager"), "folder"),
+            (("kalzium", "chemistry"), "chemistry"),
+            (("step", "physics"), "physics"),
+            (("kig", "geometry"), "applications"),
+            (("terminal", "xterm"), "terminal"),
+        )
+        for names, icon in known:
+            if any(name in identity for name in names):
+                return icon
+        return "applications"
+
+    def activate(self, xid):
+        target = self.display.create_resource_object("window", int(xid))
+        event = protocol.event.ClientMessage(
+            window=target, client_type=self.atoms["_NET_ACTIVE_WINDOW"],
+            data=(32, [2, X.CurrentTime, 0, 0, 0]),
+        )
+        self.root.send_event(event, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
+        self.display.flush()
+
+    def close(self, xid):
+        target = self.display.create_resource_object("window", int(xid))
+        event = protocol.event.ClientMessage(
+            window=target, client_type=self.atoms["_NET_CLOSE_WINDOW"],
+            data=(32, [X.CurrentTime, 2, 0, 0, 0]),
+        )
+        self.root.send_event(event, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
+        self.display.flush()
+
+
+def main():
+    monitor = WindowMonitor()
+    previous = None
+    while True:
+        windows = monitor.windows()
+        if windows != previous:
+            print(json.dumps(windows, ensure_ascii=False), flush=True)
+            previous = windows
+        ready, _, _ = select.select([sys.stdin], [], [], 0.5)
+        if ready:
+            line = sys.stdin.readline()
+            if not line:
+                return 0
+            try:
+                command = json.loads(line)
+                if command.get("action") == "activate":
+                    monitor.activate(command["id"])
+                elif command.get("action") == "close":
+                    monitor.close(command["id"])
+            except (ValueError, KeyError, TypeError, json.JSONDecodeError, error.BadWindow):
+                continue
+
+
+if __name__ == "__main__":
+    sys.exit(main())

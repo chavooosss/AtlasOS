@@ -1,0 +1,34 @@
+{
+  "schema": "atlasos-release-candidate-v1",
+  "project": "AtlasOS",
+  "version": "0.6.3",
+  "maturity": "Development Preview / Release Candidate",
+  "architecture": "amd64",
+  "artifact": {
+    "filename": "AtlasOS-0.6.3-rc1-live-amd64.iso",
+    "size_bytes": 3273064448,
+    "sha256": "0a044347d556493ea62e3767f22e4cba796962988b9be9a4ee156ad7c96b4233",
+    "publication_status": "not published"
+  },
+  "boot_policy": {
+    "primary": "UEFI",
+    "legacy_bios": "best-effort; not release-gating; not validated for this candidate",
+    "secure_boot": "not validated"
+  },
+  "validation": {
+    "virtual": "QEMU/OVMF reached the AtlasOS Live desktop in one normal smoke test; 180-second capture retained locally.",
+    "physical": "user-reported PASS on one Casper Excalibur G870 using UEFI and a USB Live session; see ../validation/physical-0.6.3-rc1.md",
+    "scope": "single-device smoke-test evidence; not broad hardware qualification"
+  },
+  "distribution_review": {
+    "project_license": "MIT for AtlasOS-owned source only; third-party components retain their own terms",
+    "google_chrome": "absent from candidate package manifest",
+    "google_apt_repository": "absent from candidate filesystem source list",
+    "startup_wav": "absent from candidate filesystem",
+    "package_inventory": {
+      "package_count": 1692,
+      "source": "live-build filesystem.manifest",
+      "package_level_notices_and_corresponding_source_review": "pending; binary publication hold"
+    }
+  }
+}

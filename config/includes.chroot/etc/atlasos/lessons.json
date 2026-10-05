@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "demo": false,
+  "profile": {"schoolLevel": "Lise", "grade": "11", "branch": "B", "classLabel": "11/B"},
+  "schoolStart": "08:00",
+  "lessonMinutes": 40,
+  "breakMinutes": 10,
+  "lunchAfterPeriod": 5,
+  "lunchMinutes": 45,
+  "days": {
+    "1": ["Seçmeli Biyoloji", "Seçmeli Biyoloji", "Seçmeli Matematik", "Seçmeli Matematik", "Rehberlik", "İngilizce", "İngilizce", "Türk Dili ve Edebiyatı"],
+    "2": ["Seçmeli Fizik", "Seçmeli Fizik", "Seçmeli Matematik", "Seçmeli Matematik", "Türk Dili ve Edebiyatı", "Türk Dili ve Edebiyatı", "Seçmeli Kimya", "Seçmeli Kimya"],
+    "3": ["Seçmeli Proje ve Uygulamaları", "Seçmeli Proje ve Uygulamaları", "Beden Eğitimi ve Spor", "Beden Eğitimi ve Spor", "İngilizce", "İngilizce", "Felsefe", "Felsefe"],
+    "4": ["Seçmeli Matematik", "Seçmeli Matematik", "Seçmeli Biyoloji", "Seçmeli Biyoloji", "Müzik / Görsel Sanatlar", "Müzik / Görsel Sanatlar", "Seçmeli Kimya", "Seçmeli Kimya"],
+    "5": ["Seçmeli Fizik", "Seçmeli Fizik", "Tarih", "Tarih", "Türk Dili ve Edebiyatı", "Türk Dili ve Edebiyatı", "Din Kültürü ve Ahlak Bilgisi", "Din Kültürü ve Ahlak Bilgisi"]
+  }
+}

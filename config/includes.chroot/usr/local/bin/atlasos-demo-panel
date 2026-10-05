@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sleep 2
+gsettings set org.gnome.nm-applet disable-connected-notifications true >/dev/null 2>&1 || true
+gsettings set org.gnome.nm-applet disable-disconnected-notifications true >/dev/null 2>&1 || true
+gsettings set org.gnome.nm-applet suppress-wireless-networks-available true >/dev/null 2>&1 || true
+log_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/atlasos"
+mkdir -p "${log_dir}"
+log_file="${log_dir}/panel.log"
+for attempt in 1 2 3; do
+  printf '\nAtlasOS shell attempt %s at %s\n' "${attempt}" "$(date -Is)" >>"${log_file}"
+  if env QML_XHR_ALLOW_FILE_READ=1 atlasos-ui >>"${log_file}" 2>&1; then
+    exit 0
+  else
+    status=$?
+  fi
+  printf 'AtlasOS shell exited with status %s\n' "${status}" >>"${log_file}"
+  if (( attempt < 3 )); then sleep 2; fi
+done
+zenity --error --title="AtlasOS" --text="AtlasOS kabugu acilamadi. XFCE kurtarma oturumunu giris ekranindan secebilirsiniz. Kayit: ${log_file}" 2>/dev/null || true
+exit "${status}"

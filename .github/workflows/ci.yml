@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-python:
+    name: Source policy and Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Compile Python sources
+        run: python -m compileall -q config/includes.chroot/usr/local tests tools/ci
+      - name: Python unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Repository policy, docs, manifest, and artifact guard
+        run: python tools/ci/check_repo.py
+
+  shell-and-dispatcher:
+    name: Shell syntax and live-build dispatcher regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install focused shell-check dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y live-build shellcheck
+      - name: Check shell syntax
+        run: |
+          mapfile -d '' scripts < <(find iso tests atlas-boot/tools -type f -name '*.sh' -print0)
+          for script in "${scripts[@]}"; do bash -n "$script"; done
+      - name: ShellCheck build and dispatcher scripts
+        run: shellcheck --severity=warning --exclude=SC2094 iso/build-atlasos.sh iso/check-build-env.sh iso/live-build-dispatch.sh
+      - name: Safe build preflight (dry run only)
+        run: |
+          ATLASOS_BUILD_DIR="$PWD/build/ci-preflight-${GITHUB_RUN_ID}" \
+          ATLASOS_OUTPUT_DIR="$PWD/dist/ci-preflight-${GITHUB_RUN_ID}" \
+          ATLASOS_ISO_NAME=preflight.iso \
+          bash iso/build-atlasos.sh --dry-run
+      - name: Dispatcher regression (no ISO build)
+        run: bash iso/check-build-env.sh --dispatch-only
+
+  rust:
+    name: Rust format and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atlas-boot
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - run: cargo fmt --check
+      - run: cargo test --locked
+
+  powershell:
+    name: PowerShell parser check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Parse build wrapper without running it
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'iso/build-atlasos.ps1'), [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host 'PowerShell parser: PASS'
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan repository history with Gitleaks
+        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+        with:
+          args: git --redact --no-banner --exit-code 1 .

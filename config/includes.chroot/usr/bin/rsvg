@@ -1,0 +1,26 @@
+#!/bin/sh
+format=png
+height=
+width=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --format)
+      format="$2"
+      shift 2
+      ;;
+    --height)
+      height="$2"
+      shift 2
+      ;;
+    --width)
+      width="$2"
+      shift 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+input="$1"
+output="$2"
+exec rsvg-convert -f "$format" -h "$height" -w "$width" -o "$output" "$input"

@@ -1,0 +1,1165 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import base64
+import binascii
+import shutil
+import stat
+import tempfile
+import re
+import subprocess
+import threading
+from datetime import datetime
+from pathlib import Path
+
+from PySide6.QtCore import QCoreApplication, QObject, QProcess, QProcessEnvironment, QRect, QSettings, Qt, QTimer, QUrl, Property, Signal, Slot
+from PySide6.QtGui import QFont, QGuiApplication, QRegion, QWindow
+from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent, QQmlContext, QQmlEngine
+from PySide6.QtWebEngineQuick import QtWebEngineQuick
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import atlasos_diagnostics
+
+
+def load_lesson_data():
+    config_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    candidates = [
+        Path(os.environ["ATLASOS_LESSON_DATA"]) if os.environ.get("ATLASOS_LESSON_DATA") else None,
+        config_root / "atlasos" / "lessons.json",
+        Path("/etc/atlasos/lessons.json"),
+        Path("/usr/local/share/atlasos/ui/data/lessons.json"),
+        Path(__file__).resolve().parent.parent / "share/atlasos/ui/data/lessons.json",
+    ]
+    for path in candidates:
+        if path is None:
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if (isinstance(data, dict) and data.get("version") == 1 and isinstance(data.get("today"), list)):
+            return data
+        if (isinstance(data, dict) and data.get("version") == 2 and isinstance(data.get("days"), dict)):
+            return data
+    return {"version": 2, "demo": True, "days": {}}
+
+
+class AtlasFs(QObject):
+    TEXT_SUFFIXES = {
+        ".txt", ".md", ".csv", ".log", ".json", ".xml", ".yaml", ".yml",
+        ".ini", ".cfg", ".conf", ".html", ".css", ".sh", ".py", ".js", ".ts",
+    }
+    MAX_TEXT_BYTES = 2 * 1024 * 1024
+
+    @Slot(result="QVariantList")
+    def mountedRemovableVolumes(self):
+        mounts = []
+        try:
+            lines = Path("/proc/self/mounts").read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return mounts
+        seen = set()
+        for line in lines:
+            fields = line.split()
+            if len(fields) < 2:
+                continue
+            device = fields[0].replace("\\040", " ")
+            mountpoint = fields[1].replace("\\040", " ")
+            if not (mountpoint.startswith("/media/") or mountpoint.startswith("/run/media/")):
+                continue
+            path = Path(mountpoint)
+            if mountpoint in seen or not path.is_dir() or not os.access(path, os.R_OK | os.X_OK):
+                continue
+            seen.add(mountpoint)
+            mounts.append({"title": path.name or device, "folder": mountpoint, "device": device})
+        return mounts
+
+    @Slot(result="QVariantMap")
+    def mountRemovableVolumes(self):
+        try:
+            result = subprocess.run(["lsblk", "-rpn", "-o", "NAME,RM,TYPE,MOUNTPOINT"], capture_output=True, text=True, timeout=5, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return {"ok": False, "message": "USB aygıtları taranamadı."}
+        candidates = []
+        for line in result.stdout.splitlines():
+            fields = line.split(None, 3)
+            if len(fields) >= 3 and fields[1] == "1" and fields[2] == "part" and (len(fields) < 4 or not fields[3]):
+                candidates.append(fields[0])
+        errors = []
+        for device in candidates:
+            try:
+                mounted = subprocess.run(["udisksctl", "mount", "--block-device", device], capture_output=True, text=True, timeout=20, check=False)
+                if mounted.returncode != 0:
+                    errors.append("USB belleği bağlama izni alınamadı.")
+            except (OSError, subprocess.TimeoutExpired):
+                errors.append("USB belleği bağlama işlemi tamamlanamadı.")
+        volumes = self.mountedRemovableVolumes()
+        return {"ok": bool(volumes), "volumes": volumes, "message": "" if volumes else (errors[0] if errors else "Bağlı bir USB bellek bulunamadı.")}
+
+    @Slot(str, result="QVariantMap")
+    def ejectRemovableVolume(self, url):
+        requested = Path(QUrl(url).toLocalFile()).resolve()
+        volume = next((item for item in self.mountedRemovableVolumes() if requested == Path(item["folder"]).resolve() or Path(item["folder"]).resolve() in requested.parents), None)
+        if not volume:
+            return {"ok": False, "message": "Bu klasör çıkarılabilir bir USB birimi değil."}
+        try:
+            removable = subprocess.run(["lsblk", "-dnro", "RM", volume["device"]], capture_output=True, text=True, timeout=5, check=False).stdout.strip()
+            if removable != "1":
+                return {"ok": False, "message": "Aygıt çıkarılabilir disk olarak doğrulanamadı."}
+            unmounted = subprocess.run(["udisksctl", "unmount", "--block-device", volume["device"]], capture_output=True, text=True, timeout=20, check=False)
+            if unmounted.returncode != 0:
+                return {"ok": False, "message": "USB güvenle çıkarılamadı; açık dosyaları kapatıp yeniden deneyin."}
+            parent = subprocess.run(["lsblk", "-dnro", "PKNAME", volume["device"]], capture_output=True, text=True, timeout=5, check=False).stdout.strip()
+            if parent:
+                subprocess.run(["udisksctl", "power-off", "--block-device", "/dev/" + parent], capture_output=True, text=True, timeout=20, check=False)
+            return {"ok": True, "message": "USB belleği güvenle çıkarabilirsiniz."}
+        except (OSError, subprocess.TimeoutExpired):
+            return {"ok": False, "message": "USB çıkarma işlemi tamamlanamadı."}
+
+    @Slot(str, result=str)
+    def displayPath(self, url):
+        return QUrl(url).toLocalFile()
+
+    @Slot(str, result=bool)
+    def directoryExists(self, url):
+        path = QUrl(url).toLocalFile()
+        return bool(path) and os.path.isdir(path) and os.access(path, os.R_OK | os.X_OK)
+
+    @Slot(str, str, result=bool)
+    def canOpen(self, kind, url):
+        raw_path = QUrl(url).toLocalFile()
+        suffixes = {"pdf": {".pdf"}, "video": {".mp4", ".mkv", ".webm", ".avi"}, "text": self.TEXT_SUFFIXES}
+        if kind not in suffixes or not raw_path:
+            return False
+        requested_path = Path(raw_path)
+        if kind == "text" and requested_path.is_symlink():
+            return False
+        try:
+            path = requested_path.resolve(strict=True)
+        except (OSError, RuntimeError):
+            return False
+        roots = (Path.home().resolve(), Path("/media").resolve(), Path("/run/media").resolve())
+        return path.is_file() and path.suffix.lower() in suffixes[kind] and any(path.is_relative_to(root) for root in roots)
+
+    @Slot(str, result="QVariantMap")
+    def readText(self, url):
+        if not self.canOpen("text", url):
+            return {"ok": False, "text": "", "error": "Dosyaya erişilemiyor veya bu konum desteklenmiyor."}
+        path = Path(QUrl(url).toLocalFile()).resolve()
+        try:
+            with path.open("rb") as source:
+                contents = source.read(self.MAX_TEXT_BYTES + 1)
+            if len(contents) > self.MAX_TEXT_BYTES:
+                return {"ok": False, "text": "", "error": "Metin dosyası 2 MB sınırını aşıyor."}
+            if b"\0" in contents:
+                return {"ok": False, "text": "", "error": "Bu dosya metin biçiminde görünmüyor."}
+            return {"ok": True, "text": contents.decode("utf-8-sig"), "error": ""}
+        except (OSError, UnicodeError) as error:
+            return {"ok": False, "text": "", "error": "Metin dosyası okunamadı: " + str(error)}
+
+    @Slot(str, str, result="QVariantMap")
+    def writeText(self, url, contents):
+        if not self.canOpen("text", url):
+            return {"ok": False, "error": "Bu metin dosyası güvenli konumda değil veya biçimi desteklenmiyor."}
+        try:
+            encoded = contents.encode("utf-8")
+        except (AttributeError, UnicodeEncodeError):
+            return {"ok": False, "error": "Metin UTF-8 olarak kaydedilemedi."}
+        if len(encoded) > self.MAX_TEXT_BYTES:
+            return {"ok": False, "error": "Metin dosyası 2 MB sınırını aşıyor."}
+        if b"\0" in encoded:
+            return {"ok": False, "error": "Metin NUL karakteri içeremez."}
+
+        path = Path(QUrl(url).toLocalFile()).resolve()
+        temporary_path = None
+        try:
+            original_mode = stat.S_IMODE(path.stat().st_mode)
+            descriptor, temporary_path = tempfile.mkstemp(prefix=".atlasos-save-", dir=str(path.parent))
+            with os.fdopen(descriptor, "wb") as destination:
+                destination.write(encoded)
+                destination.flush()
+                os.fsync(destination.fileno())
+            try:
+                os.chmod(temporary_path, original_mode)
+            except OSError:
+                pass
+            os.replace(temporary_path, path)
+            temporary_path = None
+            return {"ok": True, "error": ""}
+        except OSError as error:
+            return {"ok": False, "error": "Dosya kaydedilemedi: " + str(error)}
+        finally:
+            if temporary_path is not None:
+                try:
+                    os.unlink(temporary_path)
+                except OSError:
+                    pass
+
+    @Slot(result="QVariantMap")
+    def finishDemoLesson(self):
+        home = Path.home().resolve()
+        allowed = (
+            home / ".cache" / "atlasos-session",
+            home / "İndirilenler" / "atlasos-gecici",
+            home / "Downloads" / "atlasos-temp",
+        )
+        removed = []
+        failures = []
+        for target in allowed:
+            try:
+                if target.is_symlink() or not target.exists():
+                    continue
+                resolved = target.resolve(strict=True)
+                if resolved != target or target.name not in {"atlasos-session", "atlasos-gecici", "atlasos-temp"}:
+                    failures.append(target.name)
+                    continue
+                if target.is_dir():
+                    shutil.rmtree(target)
+                    removed.append(target.name)
+            except OSError:
+                failures.append(target.name)
+        return {"ok": not failures, "removed": removed, "failed": failures}
+
+    @Slot(str, result=str)
+    def saveWhiteboard(self, data_url):
+        prefix = "data:image/png;base64,"
+        if not data_url.startswith(prefix):
+            return ""
+        try:
+            image = base64.b64decode(data_url[len(prefix):], validate=True)
+        except (binascii.Error, ValueError):
+            return ""
+        if not image.startswith(b"\x89PNG\r\n\x1a\n") or len(image) > 25 * 1024 * 1024:
+            return ""
+        directory = Path.home() / "Documents" / "AtlasOS" / "Ders"
+        directory.mkdir(parents=True, exist_ok=True)
+        destination = directory / ("Tahta-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".png")
+        destination.write_bytes(image)
+        return str(destination)
+
+
+def split_nmcli_row(line):
+    fields = []
+    value = ""
+    escaped = False
+    for char in line:
+        if escaped:
+            value += char
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == ":":
+            fields.append(value)
+            value = ""
+        else:
+            value += char
+    fields.append(value)
+    return fields
+
+
+class AtlasNetwork(QObject):
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._networks = []
+        self._busy = False
+        self._message = ""
+        self._wired = {"state": "Denetleniyor", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
+        self._process = QProcess(self)
+        environment = QProcessEnvironment.systemEnvironment()
+        environment.insert("LC_ALL", "C")
+        self._process.setProcessEnvironment(environment)
+        self._process.finished.connect(self._finished)
+        self._process.errorOccurred.connect(self._failed)
+        self._action = ""
+        self._pending_wifi_secret = ""
+        self._process.started.connect(self._send_wifi_secret)
+        self._wired_process = QProcess(self)
+        self._wired_process.setProcessEnvironment(environment)
+        self._wired_process.finished.connect(self._wired_finished)
+        self._wired_stage = ""
+        self._probe_process = QProcess(self)
+        self._probe_process.setProcessEnvironment(environment)
+        self._probe_process.finished.connect(self._internet_probe_finished)
+        self._probe_result = "Henüz sınanmadı"
+        self._probe_busy = False
+
+    @Property("QVariantList", notify=changed)
+    def networks(self):
+        return self._networks
+
+    @Property(bool, notify=changed)
+    def busy(self):
+        return self._busy
+
+    @Property(str, notify=changed)
+    def message(self):
+        return self._message
+
+    @Property("QVariantMap", notify=changed)
+    def wired(self):
+        return self._wired
+
+    @Property(str, notify=changed)
+    def internetProbeResult(self):
+        return self._probe_result
+
+    @Property(bool, notify=changed)
+    def internetProbeBusy(self):
+        return self._probe_busy
+
+    @Slot()
+    def testInternet(self):
+        if self._probe_process.state() != QProcess.NotRunning:
+            return
+        self._probe_busy = True
+        self._probe_result = "EBA HTTPS bağlantısı sınanıyor…"
+        self.changed.emit()
+        self._probe_process.start("curl", ["--connect-timeout", "5", "--max-time", "10", "--silent", "--show-error", "--output", "/dev/null", "--write-out", "%{http_code}", "https://www.eba.gov.tr/"])
+
+    def _internet_probe_finished(self, exit_code, _status):
+        code = bytes(self._probe_process.readAllStandardOutput()).decode("ascii", "replace").strip()
+        error = bytes(self._probe_process.readAllStandardError()).decode("utf-8", "replace").casefold()
+        self._probe_busy = False
+        if exit_code == 0 and code.isdigit() and 200 <= int(code) < 400:
+            self._probe_result = "EBA HTTPS erişimi başarılı (HTTP " + code + ")."
+        elif "resolve host" in error or "could not resolve" in error:
+            self._probe_result = "DNS adı çözümlenemedi."
+        elif "timed out" in error or "failed to connect" in error or "network is unreachable" in error:
+            self._probe_result = "Ağ geçidi veya HTTPS bağlantısı yanıt vermedi."
+        elif "certificate" in error or "ssl" in error or "tls" in error:
+            self._probe_result = "TLS sertifikası doğrulanamadı; sistem tarihi ve sertifika zinciri kontrol edilmeli."
+        else:
+            self._probe_result = "EBA HTTPS erişimi başarısız; IP, ağ geçidi ve DNS adımlarını inceleyin."
+        self.changed.emit()
+
+    @Slot()
+    def refreshWired(self):
+        if self._wired_process.state() != QProcess.NotRunning:
+            return
+        self._wired_stage = "devices"
+        self._wired_process.start("nmcli", ["-t", "-e", "yes", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"])
+
+    def _wired_finished(self, exit_code, _status):
+        output = bytes(self._wired_process.readAllStandardOutput()).decode("utf-8", "replace")
+        if exit_code != 0:
+            if self._wired_stage == "connectivity":
+                details = dict(self._wired)
+                details["connectivity"] = "unknown"
+                self._wired = details
+                self._wired_stage = ""
+            else:
+                self._wired = {"state": "NetworkManager okunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": "unknown"}
+                self._start_connectivity_check()
+        elif self._wired_stage == "devices":
+            rows = [split_nmcli_row(line) for line in output.splitlines()]
+            ethernet = next((row for row in rows if len(row) >= 4 and row[1] == "ethernet"), None)
+            if not ethernet:
+                self._wired = {"state": "Kablolu aygıt bulunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
+                self._start_connectivity_check()
+            else:
+                device, _, state, connection = ethernet[:4]
+                self._wired = {"state": state, "device": device, "connection": connection, "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
+                self._wired_stage = "details"
+                self._wired_process.start("nmcli", ["-t", "-e", "yes", "-f", "GENERAL.STATE,WIRED-PROPERTIES.CARRIER,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS", "device", "show", device])
+        elif self._wired_stage == "details":
+            details = dict(self._wired)
+            for line in output.splitlines():
+                key, _, value = line.partition(":")
+                if key == "WIRED-PROPERTIES.CARRIER": details["carrier"] = value
+                elif key.startswith("IP4.ADDRESS"): details["address"] = value
+                elif key == "IP4.GATEWAY": details["gateway"] = value
+                elif key.startswith("IP4.DNS"): details["dns"] = (details["dns"] + ", " + value).strip(", ")
+            self._wired = details
+            self._start_connectivity_check()
+        elif self._wired_stage == "connectivity":
+            details = dict(self._wired)
+            connectivity = output.strip().splitlines()
+            details["connectivity"] = connectivity[-1] if connectivity else "unknown"
+            self._wired = details
+            self._wired_stage = ""
+        self.changed.emit()
+
+    def _start_connectivity_check(self):
+        self._wired_stage = "connectivity"
+        self._wired_process.start("nmcli", ["networking", "connectivity", "check"])
+
+    def _run(self, action, args):
+        if self._process.state() != QProcess.NotRunning:
+            return
+        self._action = action
+        self._busy = True
+        self._message = ""
+        self.changed.emit()
+        self._process.start("nmcli", args)
+
+    @Slot()
+    def refresh(self):
+        self.refreshWired()
+        self._run("list", ["-t", "-e", "yes", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "auto"])
+
+    @Slot(str)
+    def connectTo(self, ssid):
+        if ssid:
+            # A private profile uses the active demo account's own NM permission.
+            self._run("connect", ["--wait", "30", "device", "wifi", "connect", ssid, "private", "yes"])
+
+    @Slot(str, str)
+    def connectSecure(self, ssid, password):
+        if not ssid or not password or self._process.state() != QProcess.NotRunning:
+            self._message = "Ağ adı ve parola gerekli."
+            self.changed.emit()
+            return
+        self._action = "connect-secure"
+        self._busy = True
+        self._message = "Wi-Fi bağlantısı deneniyor..."
+        self._pending_wifi_secret = password
+        self.changed.emit()
+        self._process.start("nmcli", ["--ask", "--wait", "30", "device", "wifi", "connect", ssid, "private", "yes"])
+
+    def _send_wifi_secret(self):
+        if self._pending_wifi_secret:
+            secret = self._pending_wifi_secret
+            self._pending_wifi_secret = ""
+            self._process.write((secret + "\n").encode("utf-8"))
+
+    @Slot()
+    def openEditor(self):
+        self._message = "Gelişmiş kurumsal Wi-Fi profilleri bu sürümde düzenlenemez."
+        self.changed.emit()
+    def _failed(self, _error):
+        self._busy = False
+        self._message = "Ağ yöneticisi başlatılamadı."
+        self.changed.emit()
+
+    def _finished(self, exit_code, _status):
+        output = bytes(self._process.readAllStandardOutput()).decode("utf-8", "replace")
+        error = bytes(self._process.readAllStandardError()).decode("utf-8", "replace")
+        self._busy = False
+        if exit_code != 0:
+            self._message = ("Bağlantı yetkisi yok. Aktif oturumu ve ağ izinlerini kontrol edin." if "Insufficient privileges" in error else error.strip() or "Ağ işlemi tamamlanamadı.")
+        elif self._action == "list":
+            networks = {}
+            for line in output.splitlines():
+                parts = split_nmcli_row(line)
+                if len(parts) != 4 or not parts[1]:
+                    continue
+                active, ssid, signal, security = parts
+                candidate = {"ssid": ssid, "signal": signal, "security": security, "active": active == "*"}
+                previous = networks.get(ssid)
+                if not previous or candidate["active"] or int(signal or 0) > int(previous["signal"] or 0):
+                    networks[ssid] = candidate
+            self._networks = sorted(networks.values(), key=lambda item: (not item["active"], -int(item["signal"] or 0), item["ssid"]))
+            self._message = "" if self._networks else "Kablosuz ağ bulunamadı."
+        else:
+            self._message = "Bağlantı isteği gönderildi."
+        self.changed.emit()
+        if self._action in ("connect", "connect-secure"):
+            QTimer.singleShot(2000, self.refresh)
+
+
+class AtlasDiagnostics(QObject):
+    """Explicit, bounded diagnostics; no polling and no privileged helper."""
+    progressChanged = Signal(str, int)
+    completed = Signal("QVariantMap")
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._collector = atlasos_diagnostics.DiagnosticsCollector()
+        self._busy = False
+        self._progress = 0
+        self._stage = "Hazır"
+        self._result = {}
+        self._cancel = threading.Event()
+
+    @Property(bool, notify=changed)
+    def busy(self): return self._busy
+
+    @Property(int, notify=changed)
+    def progress(self): return self._progress
+
+    @Property(str, notify=changed)
+    def stage(self): return self._stage
+
+    @Property(str, notify=changed)
+    def bundleName(self): return self._result.get("bundle_name", "")
+
+    @Slot(result="QVariantMap")
+    def snapshot(self):
+        collector = atlasos_diagnostics.DiagnosticsCollector()
+        data = collector.system_snapshot()
+        screen = QGuiApplication.primaryScreen()
+        if screen is not None:
+            geometry = screen.geometry()
+            data["display"] = dict(data.get("display") or {})
+            data["display"]["resolution"] = f"{geometry.width()} × {geometry.height()}"
+        data["performance"] = {"cpu": collector.cpu_snapshot(), "memory": collector.memory_snapshot(),
+                               "load_average": atlasos_diagnostics._read(collector.proc_root / "loadavg", None),
+                               "processes": collector.process_snapshot()}
+        return data
+
+    @Slot(result="QVariantMap")
+    def runAll(self):
+        if self._busy:
+            return {"ok": False, "error": "Tanılama zaten çalışıyor."}
+        self._busy = True
+        self._progress = 0
+        self._stage = "Tanılama başlatılıyor"
+        self._result = {}
+        self._cancel.clear()
+        self.changed.emit()
+
+        def worker():
+            try:
+                def on_progress(label, value):
+                    if self._cancel.is_set():
+                        raise InterruptedError("Kullanıcı tanılamayı durdurdu.")
+                    self.progressChanged.emit(label, value)
+                result = self._collector.collect_all(progress=on_progress)
+                self.completed.emit(result)
+            except Exception as exc:
+                self.completed.emit({"ok": False, "error": str(exc)})
+        threading.Thread(target=worker, name="atlasos-diagnostics", daemon=True).start()
+        return {"ok": True, "started": True}
+
+    @Slot()
+    def cancel(self):
+        self._cancel.set()
+
+    @Slot(result="QVariantList")
+    def refreshExportTargets(self):
+        return self._collector.storage.export_targets()
+
+    @Slot(str, result="QVariantMap")
+    def exportBundle(self, target_id):
+        try:
+            if not re.fullmatch(r"[0-9]{1,10}", target_id):
+                raise PermissionError("USB hedefi seçilmedi veya doğrulanmadı.")
+            target = next((item for item in self._collector.storage.export_targets() if item["id"] == target_id), None)
+            if not target:
+                raise PermissionError("Doğrulanmış ayrı bir USB dışa aktarma hedefi bulunamadı.")
+            archive_text = self._result.get("bundle", "")
+            archive = Path(archive_text)
+            if not archive_text:
+                raise FileNotFoundError("Önce tüm tanılamaları çalıştırıp paket oluşturun.")
+            exported = self._collector.storage.export(archive, target["mountpoint"], target["id"])
+            return {"ok": True, "path": exported, "message": "Tanılama paketi doğrulanmış USB belleğe aktarıldı."}
+        except (OSError, ValueError) as exc:
+            return {"ok": False, "message": str(exc)}
+
+    @Slot("QVariantMap")
+    def _onCompleted(self, result):
+        self._result = dict(result)
+        self._busy = False
+        self._progress = 100 if result.get("ok") else self._progress
+        self._stage = "Tamamlandı" if result.get("ok") else result.get("error", "Tanılama tamamlanamadı")
+        self.changed.emit()
+
+    @Slot(str, int)
+    def _onProgress(self, label, value):
+        self._stage = label
+        self._progress = max(0, min(100, int(value)))
+        self.changed.emit()
+
+
+class AtlasResources(QObject):
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._cpu = 0.0
+        self._memory_percent = 0.0
+        self._memory_used = 0
+        self._memory_total = 0
+        self._last_cpu = None
+        self.refresh()
+
+    @Property(float, notify=changed)
+    def cpuPercent(self): return self._cpu
+
+    @Property(float, notify=changed)
+    def memoryPercent(self): return self._memory_percent
+
+    @Property(int, notify=changed)
+    def memoryUsedMb(self): return self._memory_used
+
+    @Property(int, notify=changed)
+    def memoryTotalMb(self): return self._memory_total
+
+    @Slot()
+    def refresh(self):
+        try:
+            fields = Path("/proc/stat").read_text().splitlines()[0].split()[1:]
+            values = [int(value) for value in fields]
+            idle = values[3] + (values[4] if len(values) > 4 else 0)
+            total = sum(values)
+            if self._last_cpu:
+                delta_total = total - self._last_cpu[0]
+                delta_idle = idle - self._last_cpu[1]
+                if delta_total > 0:
+                    self._cpu = round(100 * (delta_total - delta_idle) / delta_total, 1)
+            self._last_cpu = (total, idle)
+            memory = {}
+            for line in Path("/proc/meminfo").read_text().splitlines():
+                key, _, value = line.partition(":")
+                if key in {"MemTotal", "MemAvailable"}:
+                    memory[key] = int(value.strip().split()[0])
+            total_kb = memory.get("MemTotal", 0)
+            available_kb = memory.get("MemAvailable", total_kb)
+            self._memory_total = round(total_kb / 1024)
+            self._memory_used = round((total_kb - available_kb) / 1024)
+            self._memory_percent = round(100 * (total_kb - available_kb) / total_kb, 1) if total_kb else 0.0
+        except (OSError, ValueError, IndexError):
+            pass
+        self.changed.emit()
+
+class AtlasPower(QObject):
+    failed = Signal(str)
+
+    @Slot(str)
+    def run(self, action):
+        commands = {
+            "logout": ("loginctl", ["terminate-session", os.environ.get("XDG_SESSION_ID", "")]),
+            "restart": ("systemctl", ["reboot"]),
+            "shutdown": ("systemctl", ["poweroff"]),
+        }
+        command = commands.get(action)
+        if command is None or (action == "logout" and not command[1][1]):
+            self.failed.emit("Oturum işlemi kullanılamıyor.")
+        elif not QProcess.startDetached(command[0], command[1])[0]:
+            self.failed.emit("Oturum işlemi başlatılamadı.")
+
+
+class AtlasApps(QObject):
+    failed = Signal(str)
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._settings = QSettings("AtlasOS", "AtlasOS")
+        self._favorites = self._read_keys("favoriteMaterials")
+        self._recent = self._read_keys("recentMaterials")
+
+    @staticmethod
+    def _valid_material_key(key):
+        return key in {"eba", "ogm", "mebi", "geogebra", "kig", "kalzium", "step", "books", "pdf", "presentation", "video", "whiteboard", "library"}
+
+    def _read_keys(self, setting):
+        values = self._settings.value(setting, [], type=list)
+        return [value for value in values if isinstance(value, str) and self._valid_material_key(value)] if isinstance(values, list) else []
+
+    @Property("QVariantList", notify=changed)
+    def favoriteKeys(self):
+        return self._favorites
+
+    @Property("QVariantList", notify=changed)
+    def recentKeys(self):
+        return self._recent
+
+    @Slot(str, bool)
+    def setFavorite(self, key, enabled):
+        if not self._valid_material_key(key):
+            return
+        updated = list(self._favorites)
+        if enabled and key not in updated:
+            updated.append(key)
+        elif not enabled and key in updated:
+            updated.remove(key)
+        if updated != self._favorites:
+            self._favorites = updated
+            self._settings.setValue("favoriteMaterials", self._favorites)
+            self.changed.emit()
+
+    @Slot(str)
+    def track(self, key):
+        if not self._valid_material_key(key):
+            return
+        updated = [key] + [item for item in self._recent if item != key]
+        if updated != self._recent:
+            self._recent = updated[:8]
+            self._settings.setValue("recentMaterials", self._recent)
+            self.changed.emit()
+
+    @Slot(str, result=bool)
+    def open(self, key):
+        commands = {
+            "browser": ("atlasos-browser", ["about:blank"]),
+            "kig": ("atlasos-app-launcher", ["kig"]),
+            "kalzium": ("atlasos-app-launcher", ["kalzium"]),
+            "step": ("atlasos-app-launcher", ["step"]),
+        }
+        command = commands.get(key)
+        if command is None:
+            self.failed.emit("Bu uygulama AtlasOS'ta kullanılamıyor.")
+            return False
+        started, _pid = QProcess.startDetached(command[0], command[1])
+        if not started:
+            self.failed.emit({"browser": "Web Tarayıcısı", "kig": "Kig", "kalzium": "Kalzium", "step": "Step"}.get(key, "Uygulama") + " başlatılamadı.")
+        return started
+
+    @Slot(str, result=bool)
+    def openExternalBrowser(self, url):
+        if not url.startswith(("http://", "https://")):
+            self.failed.emit("Web adresi gecersiz.")
+            return False
+        started, _pid = QProcess.startDetached("atlasos-browser", [url])
+        if not started:
+            self.failed.emit("Harici web tarayicisi baslatilamadi.")
+        return started
+
+
+class AtlasAudio(QObject):
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._available = False
+        self._volume = 0
+        self._muted = False
+        self.refresh()
+
+    @Property(bool, notify=changed)
+    def available(self):
+        return self._available
+
+    @Property(int, notify=changed)
+    def volume(self):
+        return self._volume
+
+    @Property(bool, notify=changed)
+    def muted(self):
+        return self._muted
+
+    def _read(self):
+        try:
+            result = subprocess.run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"], capture_output=True, text=True, timeout=3, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return False, 0, False
+        match = re.search(r"Volume:\s*([0-9]+(?:\.[0-9]+)?)", result.stdout)
+        if result.returncode != 0 or not match:
+            return False, 0, False
+        return True, max(0, min(100, round(float(match.group(1)) * 100))), "[MUTED]" in result.stdout
+
+    @Slot()
+    def refresh(self):
+        self._available, self._volume, self._muted = self._read()
+        self.changed.emit()
+
+    @Slot(int)
+    def setVolume(self, value):
+        if not self._available:
+            return
+        value = max(0, min(100, int(value)))
+        try:
+            subprocess.run(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{value / 100:.2f}"], capture_output=True, timeout=3, check=True)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        self.refresh()
+
+    @Slot()
+    def toggleMute(self):
+        if not self._available:
+            return
+        try:
+            subprocess.run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"], capture_output=True, timeout=3, check=True)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        self.refresh()
+
+
+class AtlasWindows(QObject):
+    changed = Signal()
+    homeRequested = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._windows = []
+        self._monitor = QProcess(self)
+        self._monitor.readyReadStandardOutput.connect(self._read_windows)
+        if shutil.which("atlasos-window-monitor"):
+            self._monitor.start("atlasos-window-monitor", [])
+
+    @Property("QVariantList", notify=changed)
+    def windows(self):
+        return self._windows
+
+    @Property("QVariantList", notify=changed)
+    def dockGroups(self):
+        groups = {}
+        for window in self._windows:
+            window_class = str(window.get("class") or "").casefold()
+            # Classless windows stay separate so unrelated apps are never merged.
+            key = window_class or "window:" + str(window.get("id", ""))
+            group = groups.setdefault(key, {"key": key, "class": window_class, "windows": []})
+            group["windows"].append(window)
+        result = []
+        for group in groups.values():
+            members = group["windows"]
+            active = next((item for item in members if item.get("active")), None)
+            selected = active or next((item for item in members if not item.get("minimized")), members[0])
+            icon_names = {"browser": "Web Tarayıcısı", "folder": "Dosyalar", "terminal": "Terminal",
+                          "office": "LibreOffice", "pdf": "Belge Görüntüleyici", "video": "Video Oynatıcı",
+                          "chemistry": "Kalzium", "physics": "Step", "applications": "Uygulama"}
+            identity = group["class"]
+            app_title = ("Web Tarayıcısı" if any(browser in identity for browser in ("chromium", "firefox", "browser")) else
+                         "Firefox" if "firefox" in identity else icon_names.get(selected.get("icon"), selected.get("title", "Uygulama")))
+            icon_window = next((item for item in members if item.get("iconData")), selected)
+            result.append({"key": group["key"], "class": group["class"], "title": app_title,
+                           "icon": selected.get("icon", "applications"), "iconData": icon_window.get("iconData", ""),
+                           "active": active is not None, "minimized": all(item.get("minimized", False) for item in members),
+                           "count": len(members), "windowId": selected.get("id", ""), "windows": members})
+        return result
+
+    def _read_windows(self):
+        for line in bytes(self._monitor.readAllStandardOutput()).decode("utf-8", "replace").splitlines():
+            try:
+                self._windows = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            self.changed.emit()
+
+    @Slot()
+    def showHome(self):
+        self.homeRequested.emit()
+
+    @Slot(str)
+    def activate(self, window_id):
+        if self._monitor.state() == QProcess.Running:
+            self._monitor.write((json.dumps({"action": "activate", "id": window_id}) + "\n").encode())
+
+    @Slot(str)
+    def closeWindow(self, window_id):
+        if self._monitor.state() == QProcess.Running:
+            self._monitor.write((json.dumps({"action": "close", "id": window_id}) + "\n").encode())
+
+
+class AtlasPreferences(QObject):
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._settings = QSettings("AtlasOS", "AtlasOS")
+        self._touchscreen_detected = self._detect_touchscreen()
+
+    @staticmethod
+    def _detect_touchscreen():
+        try:
+            devices = Path("/proc/bus/input/devices").read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False
+        for device in devices.split("\n\n"):
+            match = re.search(r'N: Name="([^"]+)"', device)
+            if not match or "event" not in device:
+                continue
+            name = match.group(1).casefold()
+            if any(token in name for token in ("touchscreen", "touch screen", "touch panel")):
+                return True
+            if any(token in name for token in ("touchpad", "trackpoint", "mouse")):
+                continue
+            abs_line = next((line for line in device.splitlines() if line.startswith("B: ABS=")), "")
+            try:
+                capabilities = int(abs_line.partition("=")[2], 16)
+            except ValueError:
+                capabilities = 0
+            if capabilities & (1 << 53) and capabilities & (1 << 54):
+                return True
+        return False
+
+    @Property(str, notify=changed)
+    def displayMode(self):
+        validation_mode = os.environ.get("ATLASOS_VALIDATE_DISPLAY_MODE")
+        if validation_mode in {"auto", "laptop", "board"}:
+            return validation_mode
+        return self._settings.value("displayMode", "auto", type=str)
+
+    @Property(bool, constant=True)
+    def touchscreenDetected(self):
+        return self._touchscreen_detected
+
+    @Slot(str)
+    def setDisplayMode(self, mode):
+        if mode not in {"auto", "laptop", "board"}:
+            return
+        self._settings.setValue("displayMode", mode)
+        self._apply_desktop_scale(mode)
+        self.changed.emit()
+
+    def _apply_desktop_scale(self, mode=None):
+        mode = mode or self.displayMode
+        board = mode == "board" or (mode == "auto" and self._touchscreen_detected)
+        os.environ["ATLASOS_DISPLAY_MODE"] = "board" if board else "laptop"
+        # Atlas scales its own touch targets and layout in QML. Changing the
+        # session-wide Xft DPI here caused a second, external scale change that
+        # could leave other windows and the WM with stale geometry on mode flips.
+
+    @Slot()
+    def applyCurrentDisplayMode(self):
+        self._apply_desktop_scale()
+
+    @Property(bool, notify=changed)
+    def startupSoundEnabled(self):
+        return self._settings.value("startupSoundEnabled", True, type=bool)
+
+    @Property(bool, constant=True)
+    def startupSoundAvailable(self):
+        ui_root = Path(os.environ.get("ATLASOS_UI_PATH", "/usr/local/share/atlasos/ui")).resolve().parent
+        sound = ui_root / "sounds/atlasos-startup.wav"
+        return sound.is_file() and sound.stat().st_size > 44
+
+    @Slot(bool)
+    def setStartupSoundEnabled(self, enabled):
+        self._settings.setValue("startupSoundEnabled", bool(enabled))
+        self.changed.emit()
+
+
+class AtlasAlerts(QObject):
+    changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._items = []
+        self._unread = 0
+
+    @Property("QVariantList", notify=changed)
+    def items(self):
+        return self._items
+
+    @Property(int, notify=changed)
+    def unread(self):
+        return self._unread
+
+    @Slot(str, str)
+    def add(self, title, message):
+        self._items = [{"title": title, "message": message,
+                        "time": datetime.now().strftime("%H:%M")}] + self._items[:19]
+        self._unread = min(self._unread + 1, 20)
+        self.changed.emit()
+
+    @Slot()
+    def markRead(self):
+        self._unread = 0
+        self.changed.emit()
+
+    @Slot()
+    def clear(self):
+        self._items = []
+        self._unread = 0
+        self.changed.emit()
+
+
+def main():
+    QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    QtWebEngineQuick.initialize()
+    os.environ.setdefault("QML_XHR_ALLOW_FILE_READ", "1")  # Atlas reads its own lesson and status JSON files.
+    app = QGuiApplication(sys.argv)
+    # fonts-noto is already part of the live image; use it consistently in
+    # QML text and Controls while retaining Qt's normal fallback behavior.
+    app.setFont(QFont("Noto Sans"))
+    engine = QQmlApplicationEngine()
+    filesystem = AtlasFs()
+    network = AtlasNetwork()
+    resources = AtlasResources()
+    resource_timer = QTimer()
+    resource_timer.timeout.connect(resources.refresh)
+    resource_timer.start(2000)
+    power = AtlasPower()
+    apps = AtlasApps()
+    audio = AtlasAudio()
+    audio_timer = QTimer()
+    audio_timer.timeout.connect(audio.refresh)
+    # Keep the header and popup in step with XFCE's global media-key bindings.
+    audio_timer.start(500)
+    windows = AtlasWindows()
+    alerts = AtlasAlerts()
+    preferences = AtlasPreferences()
+    preferences.applyCurrentDisplayMode()
+    diagnostics = AtlasDiagnostics()
+    diagnostics.completed.connect(diagnostics._onCompleted)
+    diagnostics.progressChanged.connect(diagnostics._onProgress)
+    for backend_object in (filesystem, network, resources, power, apps, audio, windows, alerts, preferences, diagnostics):
+        QQmlEngine.setObjectOwnership(backend_object, QQmlEngine.ObjectOwnership.CppOwnership)
+    power.failed.connect(lambda message: alerts.add("Oturum", message))
+    apps.failed.connect(lambda message: alerts.add("Uygulamalar", message))
+    engine.rootContext().setContextProperty("atlasFs", filesystem)
+    engine.rootContext().setContextProperty("atlasLessonDataJson", json.dumps(load_lesson_data(), ensure_ascii=False))
+    engine.rootContext().setContextProperty("atlasNetwork", network)
+    engine.rootContext().setContextProperty("atlasResources", resources)
+    engine.rootContext().setContextProperty("atlasPower", power)
+    engine.rootContext().setContextProperty("atlasApps", apps)
+    engine.rootContext().setContextProperty("atlasAudio", audio)
+    engine.rootContext().setContextProperty("atlasWindows", windows)
+    engine.rootContext().setContextProperty("atlasAlerts", alerts)
+    engine.rootContext().setContextProperty("atlasPreferences", preferences)
+    engine.rootContext().setContextProperty("atlasDiagnostics", diagnostics)
+    engine.rootContext().setContextProperty("atlasValidateSettingsSection", os.environ.get("ATLASOS_VALIDATE_SETTINGS_SECTION", ""))
+    engine.rootContext().setContextProperty("atlasValidateTextEdit", os.environ.get("ATLASOS_VALIDATE_TEXT_EDIT") == "1")
+    engine.rootContext().setContextProperty("atlasValidateMaterialFilter", os.environ.get("ATLASOS_VALIDATE_MATERIAL_FILTER", ""))
+    engine.rootContext().setContextProperty("atlasValidateAudioPopup", os.environ.get("ATLASOS_VALIDATE_AUDIO_POPUP") == "1")
+    engine.warnings.connect(lambda warnings: [print(warning.toString(), file=sys.stderr) for warning in warnings])
+    path = os.environ.get("ATLASOS_UI_PATH", "/usr/local/share/atlasos/ui/Main.qml")
+    engine.load(QUrl.fromLocalFile(path))
+    if not engine.rootObjects():
+        print("AtlasOS QML could not be loaded: " + path, file=sys.stderr)
+        return 1
+    engine.rootObjects()[0].setProperty("atlasPreferences", preferences)
+    if os.environ.get("ATLASOS_VALIDATE_DISPLAY_CYCLE") == "1":
+        window = engine.rootObjects()[0]
+        size = os.environ.get("ATLASOS_WINDOW_SIZE", "1366x768")
+        width, height = (int(part) for part in size.lower().split("x", 1))
+        window.setVisibility(QWindow.Windowed)
+        window.resize(width, height)
+        app.processEvents()
+        initial_geometry = (window.width(), window.height())
+        for mode in ("board", "laptop", "auto", "board", "auto"):
+            preferences.setDisplayMode(mode)
+            app.processEvents()
+            expected_board = mode == "board" or (mode == "auto" and preferences.touchscreenDetected)
+            actual_geometry = (window.width(), window.height())
+            if actual_geometry != initial_geometry or window.property("boardMode") != expected_board:
+                print(f"Display mode transition failed: {mode}, geometry={actual_geometry}, board={window.property('boardMode')}", file=sys.stderr)
+                return 1
+            print(f"Display mode {mode}: {actual_geometry[0]}x{actual_geometry[1]}, board={expected_board}")
+        return 0
+    view = os.environ.get("ATLASOS_VALIDATE_VIEW")
+    page = os.environ.get("ATLASOS_VALIDATE_PAGE")
+    if page:
+        engine.rootObjects()[0].setProperty("page", page)
+    if view:
+        engine.rootObjects()[0].openTool(view)
+    material_filter = os.environ.get("ATLASOS_VALIDATE_MATERIAL_FILTER", "")
+    if material_filter in {"favorites", "recent", "local", "web"}:
+        if material_filter == "favorites":
+            apps.setFavorite("kig", True)
+        elif material_filter == "recent":
+            apps.track("ogm")
+    if os.environ.get("ATLASOS_VALIDATE_LESSON_SESSION") == "1":
+        engine.rootObjects()[0].startLesson("Seçmeli Matematik", "08:00", "08:40")
+    sample_library_folder = os.environ.get("ATLASOS_VALIDATE_LIBRARY_FOLDER")
+    if sample_library_folder:
+        window = engine.rootObjects()[0]
+        window.openTool("library", True)
+        files = window.findChild(QObject, "filesView")
+        if files:
+            files.setProperty("currentFolder", QUrl.fromLocalFile(sample_library_folder))
+            files.setProperty("searchText", os.environ.get("ATLASOS_VALIDATE_LIBRARY_QUERY", "").casefold())
+    if os.environ.get("ATLASOS_VALIDATE_TOAST") == "1":
+        window = engine.rootObjects()[0]
+        window.setProperty("toastTitle", "Ders tamamlandı")
+        window.setProperty("toastMessage", "Örnek geçici veriler temizlendi. Live oturum açık.")
+        window.setProperty("toastVisible", True)
+    sample_pdf = os.environ.get("ATLASOS_VALIDATE_PDF")
+    if sample_pdf:
+        engine.rootObjects()[0].openSelectedFile("pdf", QUrl.fromLocalFile(sample_pdf).toString())
+    sample_video = os.environ.get("ATLASOS_VALIDATE_VIDEO")
+    if sample_video:
+        engine.rootObjects()[0].openSelectedFile("video", QUrl.fromLocalFile(sample_video).toString())
+    sample_text = os.environ.get("ATLASOS_VALIDATE_TEXT")
+    if sample_text:
+        engine.rootObjects()[0].openSelectedFile("text", QUrl.fromLocalFile(sample_text).toString())
+    if os.environ.get("ATLASOS_VALIDATE_WHITEBOARD") == "1":
+        def draw_whiteboard_sample():
+            board = engine.rootObjects()[0].findChild(QObject, "atlasWhiteboard")
+            if board:
+                board.setProperty("strokes", [{"color": "#d9414e", "width": 7,
+                                                "points": [{"x": 0.1, "y": 0.2}, {"x": 0.5, "y": 0.5}, {"x": 0.9, "y": 0.3}]}])
+                board.save()
+        QTimer.singleShot(700, draw_whiteboard_sample)
+    dock_window = None
+    validate_dock = os.environ.get("ATLASOS_VALIDATE_DOCK") == "1"
+    if not os.environ.get("ATLASOS_VALIDATE_UI") and (not os.environ.get("ATLASOS_SCREENSHOT") or validate_dock):
+        if validate_dock:
+            scenario = os.environ.get("ATLASOS_VALIDATE_DOCK_SCENARIO", "single")
+            windows._windows = []
+            if scenario in {"single", "two", "three", "grouped", "minimized", "unknown", "context"}:
+                fixtures = {
+                    "single": [{"id": "100", "title": "Web Tarayıcısı", "active": True, "minimized": False, "icon": "browser", "class": "chromium"}],
+                    "two": [{"id": "100", "title": "Web Tarayıcısı", "active": True, "minimized": False, "icon": "browser", "class": "chromium"},
+                            {"id": "200", "title": "Dosyalar", "active": False, "minimized": False, "icon": "folder", "class": "thunar"}],
+                    "three": [{"id": "100", "title": "Web Tarayıcısı", "active": False, "minimized": False, "icon": "browser", "class": "chromium"},
+                              {"id": "200", "title": "Dosyalar", "active": True, "minimized": False, "icon": "folder", "class": "thunar"},
+                              {"id": "300", "title": "Terminal", "active": False, "minimized": False, "icon": "terminal", "class": "xfce4-terminal"}],
+                    "grouped": [{"id": "100", "title": "Web Tarayıcısı - 1", "active": True, "minimized": False, "icon": "browser", "class": "chromium"},
+                                {"id": "101", "title": "Web Tarayıcısı - 2", "active": False, "minimized": True, "icon": "browser", "class": "chromium"}],
+                    "minimized": [{"id": "100", "title": "Dosyalar", "active": False, "minimized": True, "icon": "folder", "class": "thunar"}],
+                    "unknown": [{"id": "999", "title": "Bilinmeyen Pencere", "active": True, "minimized": False, "icon": "applications", "class": ""}],
+                    "context": [{"id": "100", "title": "Web Tarayıcısı", "active": True, "minimized": False, "icon": "browser", "class": "chromium"},
+                                {"id": "101", "title": "Web Tarayıcısı - Ders", "active": False, "minimized": True, "icon": "browser", "class": "chromium"}],
+                }
+                windows._windows = fixtures.get(scenario, [])
+        dock_path = str(Path(path).parent / "components" / "AtlasDock.qml")
+        dock_context = QQmlContext(engine.rootContext())
+        for name, backend_object in (("atlasPreferences", preferences), ("atlasWindows", windows), ("atlasPower", power), ("atlasApps", apps)):
+            dock_context.setContextProperty(name, backend_object)
+        dock_component = QQmlComponent(engine)
+        dock_component.loadUrl(QUrl.fromLocalFile(dock_path))
+        dock_window = dock_component.create(dock_context)
+        if dock_window is None:
+            print("AtlasOS dock could not be loaded: " + dock_path, file=sys.stderr)
+            for error in dock_component.errors():
+                print(error.toString(), file=sys.stderr)
+        else:
+            dock_window.setProperty("atlasPreferences", preferences)
+            dock_window.setProperty("atlasWindows", windows)
+            def update_dock_shape(*_):
+                width = max(1, int(dock_window.width()))
+                height = max(1, int(dock_window.height()))
+                radius = min(width, height)
+                left = QRegion(QRect(0, 0, radius, height), QRegion.RegionType.Ellipse)
+                middle = QRegion(QRect(radius // 2, 0, max(0, width - radius), height))
+                right = QRegion(QRect(width - radius, 0, radius, height), QRegion.RegionType.Ellipse)
+                dock_window.setMask(left.united(middle).united(right))
+            dock_window.widthChanged.connect(update_dock_shape)
+            dock_window.heightChanged.connect(update_dock_shape)
+            QTimer.singleShot(0, update_dock_shape)
+            if os.environ.get("ATLASOS_VALIDATE_DOCK_CONTEXT_MENU") == "1":
+                QTimer.singleShot(600, lambda: dock_window.setProperty("showValidationContextMenu", True))
+        windows.homeRequested.connect(lambda: (engine.rootObjects()[0].showFullScreen(), engine.rootObjects()[0].raise_(), engine.rootObjects()[0].requestActivate()))
+    if os.environ.get("ATLASOS_VALIDATE_UI") == "1":
+        app.processEvents()
+        window = engine.rootObjects()[0]
+        lesson_value = window.property("lessons")
+        lesson_list = lesson_value.toVariant() if hasattr(lesson_value, "toVariant") else lesson_value
+        print("AtlasOS schedule:", len(lesson_list or []), "demo:", window.property("demoSchedule"))
+        print("AtlasOS view:", window.property("viewMode"))
+        print("AtlasOS QML loaded" + (": " + view if view else ""))
+        return 0
+    screenshot = os.environ.get("ATLASOS_SCREENSHOT")
+    if screenshot:
+        window_size = os.environ.get("ATLASOS_WINDOW_SIZE")
+        if window_size and not validate_dock:
+            width, height = (int(part) for part in window_size.lower().split("x", 1))
+            window = engine.rootObjects()[0]
+            window.setVisibility(QWindow.Windowed)
+            window.resize(width, height)
+
+        def capture():
+            capture_shell = os.environ.get("ATLASOS_VALIDATE_DOCK_CAPTURE") == "shell"
+            window = engine.rootObjects()[0] if capture_shell else dock_window if validate_dock and dock_window else engine.rootObjects()[0]
+            browser = window.findChild(QObject, "atlasBrowser")
+            if browser:
+                print("AtlasOS web:", browser.property("currentUrl"), browser.property("errorText"))
+            pdf = window.findChild(QObject, "atlasPdf")
+            if pdf and sample_pdf:
+                print("AtlasOS PDF pages:", pdf.property("pageCount"))
+            video = window.findChild(QObject, "atlasVideo")
+            if video and sample_video:
+                print("AtlasOS video playing:", video.property("playing"), "duration:", video.property("duration"))
+            capture_target = 0 if os.environ.get("ATLASOS_VALIDATE_DOCK_CAPTURE") == "screen" else window.winId()
+            image = window.screen().grabWindow(capture_target)
+            if not image.save(screenshot):
+                print("AtlasOS screenshot failed", file=sys.stderr)
+            app.quit()
+
+        QTimer.singleShot(2200, capture)
+    result = app.exec()
+    if dock_window is not None:
+        dock_window.deleteLater()
+    return result
+
+
+if __name__ == "__main__":
+    sys.exit(main())

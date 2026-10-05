@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AtlasOS Panel
+Comment=AtlasOS classroom dashboard
+Exec=atlasos-open panel
+Icon=applications-education
+Terminal=false
+Categories=Education;

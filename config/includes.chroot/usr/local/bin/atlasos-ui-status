@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -u
+
+status_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/atlasos"
+mkdir -p "${status_dir}"
+
+while :; do
+  network="Bilinmiyor"
+  if command -v nmcli >/dev/null 2>&1; then
+    devices="$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null || true)"
+    connectivity="$(timeout 8s nmcli networking connectivity check 2>/dev/null | tail -n 1 || true)"
+    if printf '%s\n' "${devices}" | awk -F: '$2=="ethernet" && $3=="connected" {found=1} END {exit !found}'; then
+      network="Ethernet bağlı"
+    elif printf '%s\n' "${devices}" | awk -F: '$2=="wifi" && $3=="connected" {found=1} END {exit !found}'; then
+      network="Wi-Fi bağlı"
+    else
+      state="$(nmcli -t -f STATE general status 2>/dev/null | tail -n 1)"
+      case "${state}" in
+        connected*) network="Bağlı" ;;
+        disconnected*|connecting*) network="Çevrimdışı" ;;
+      esac
+    fi
+    case "${connectivity}" in
+      none) [[ "${network}" == "Ethernet bağlı" || "${network}" == "Wi-Fi bağlı" ]] && network="${network} (internet yok)" ;;
+      limited) [[ "${network}" == "Ethernet bağlı" || "${network}" == "Wi-Fi bağlı" ]] && network="${network} (internet kısıtlı)" ;;
+      portal) [[ "${network}" == "Ethernet bağlı" || "${network}" == "Wi-Fi bağlı" ]] && network="${network} (ağ girişi gerekli)" ;;
+    esac
+  fi
+
+  audio="Bilinmiyor"
+  if command -v wpctl >/dev/null 2>&1; then
+    volume="$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)"
+    if [[ "${volume}" == *MUTED* ]]; then
+      audio="Sessiz"
+    elif [[ -n "${volume}" ]]; then
+      audio="Açık"
+    fi
+  fi
+
+  pen="Algılanmadı"
+  if grep -qiE 'wacom|stylus|tablet|digitizer|pen' /proc/bus/input/devices 2>/dev/null; then
+    pen="Hazır"
+  elif grep -qiE 'touchscreen|touch screen' /proc/bus/input/devices 2>/dev/null; then
+    pen="Dokunmatik"
+  fi
+
+  usb="USB takılı değil"
+  if command -v lsblk >/dev/null 2>&1 && lsblk -rno RM,TYPE,MOUNTPOINT 2>/dev/null | awk '$1==1 && $2=="part" && $3!="" {found=1} END {exit !found}'; then
+    usb="USB bellek hazır"
+  fi
+
+  tmp="${status_dir}/status.json.tmp.$$"
+  printf '{"network":"%s","audio":"%s","pen":"%s","usb":"%s"}\n' "${network}" "${audio}" "${pen}" "${usb}" >"${tmp}"
+  mv -f "${tmp}" "${status_dir}/status.json"
+  sleep 15
+done

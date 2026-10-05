@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AtlasOS Action
+Comment=Handle AtlasOS dashboard actions
+Exec=atlasos-open %u
+Icon=applications-education
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/atlasos;

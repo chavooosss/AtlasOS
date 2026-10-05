@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=AtlasOS
+Comment=AtlasOS classroom desktop session
+Exec=/usr/local/bin/atlasos-session
+Type=Application
+DesktopNames=AtlasOS

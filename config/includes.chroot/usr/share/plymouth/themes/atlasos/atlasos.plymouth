@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=AtlasOS
+Description=AtlasOS startup and shutdown animation
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/atlasos
+ScriptFile=/usr/share/plymouth/themes/atlasos/atlasos.script

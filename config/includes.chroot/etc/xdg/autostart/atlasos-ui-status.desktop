@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=AtlasOS System Status
+Exec=atlasos-ui-status
+OnlyShowIn=XFCE;
+NoDisplay=true

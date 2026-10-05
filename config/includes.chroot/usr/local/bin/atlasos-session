@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export XDG_CURRENT_DESKTOP=AtlasOS
+export XDG_SESSION_DESKTOP=atlasos
+export DESKTOP_SESSION=atlasos
+export GDK_BACKEND=x11
+
+atlasos-session-fix || true
+xfsettingsd >/dev/null 2>&1 &
+xfwm4 --compositor=off >/dev/null 2>&1 &
+# Configure nm-applet before it starts so its first Wi-Fi scan does not emit
+# an out-of-place desktop notification. Atlas keeps network state in its UI.
+gsettings set org.gnome.nm-applet disable-connected-notifications true >/dev/null 2>&1 || true
+gsettings set org.gnome.nm-applet disable-disconnected-notifications true >/dev/null 2>&1 || true
+gsettings set org.gnome.nm-applet suppress-wireless-networks-available true >/dev/null 2>&1 || true
+nm-applet >/dev/null 2>&1 &
+/usr/libexec/polkit-mate-authentication-agent-1 >/dev/null 2>&1 &
+thunar --daemon >/dev/null 2>&1 &
+# Start the user audio graph before the shell or an external application requests a sink.
+systemctl --user start pipewire.socket pipewire-pulse.socket wireplumber.service >/dev/null 2>&1 || true
+# Desktop event tones are disabled; Atlas plays only its one-shot startup cue.
+xfconf-query -c xsettings -p /Net/EnableEventSounds -n -t bool -s false >/dev/null 2>&1 || true
+xfconf-query -c xsettings -p /Net/EnableInputFeedbackSounds -n -t bool -s false >/dev/null 2>&1 || true
+# XFCE owns the global X11 media-key grabs, so volume keys keep working while
+# an external lesson application is the active window.
+xfconf-query -c xfce4-keyboard-shortcuts -p /commands/custom/XF86AudioRaiseVolume -n -t string -s 'wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+' >/dev/null 2>&1 || true
+xfconf-query -c xfce4-keyboard-shortcuts -p /commands/custom/XF86AudioLowerVolume -n -t string -s 'wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-' >/dev/null 2>&1 || true
+xfconf-query -c xfce4-keyboard-shortcuts -p /commands/custom/XF86AudioMute -n -t string -s 'wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle' >/dev/null 2>&1 || true
+atlasos-ui-status >/dev/null 2>&1 &
+
+# The Atlas shell is the session's foreground process. If it exits, LightDM
+# returns to the greeter; XFCE remains selectable there as a recovery session.
+exec atlasos-demo-panel
