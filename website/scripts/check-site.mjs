@@ -38,4 +38,16 @@ for (const file of htmlFiles) {
 }
 
 assert.equal(walk(root).some((path) => /\.(?:iso|img|squashfs)$/i.test(path)), false, 'Build output must not contain OS images.');
-console.log(`Website smoke check passed: ${routes.length} routes, ${htmlFiles.length} HTML files, local links and images resolved.`);
+
+const sourceFiles = walk(resolve('src')).filter((path) => /\.(?:astro|css|ts|js)$/i.test(path));
+const source = sourceFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
+assert.doesNotMatch(source, /AtlasPreview|class=["']desktop-preview|class=["']boot-card/i, 'Fabricated AtlasOS interface markup must not return.');
+
+const screenshotPage = readFileSync(join(root, 'screenshots', 'index.html'), 'utf8');
+for (const image of ['atlasos-live-desktop.jpeg', 'atlasos-boot-manager.png']) {
+  assert.match(screenshotPage, new RegExp(`/AtlasOS/images/${image.replaceAll('.', '\\.')}`), `Approved real product image missing from Screenshots: ${image}`);
+}
+assert.equal((screenshotPage.match(/class="product-capture /g) || []).length, 2, 'Screenshots must present exactly two approved product captures.');
+assert.doesNotMatch(screenshotPage, /illustrative|mockup|simulation/i, 'Screenshots page must not describe fabricated product imagery.');
+
+console.log(`Website smoke check passed: ${routes.length} routes, ${htmlFiles.length} HTML files, local links/images resolved, two authentic captures verified.`);

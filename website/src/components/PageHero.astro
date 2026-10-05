@@ -9,8 +9,8 @@ const {
 } = Astro.props;
 ---
 
-<section class:list={{ "page-hero": true, "page-hero-compact": compact }}>
-  <div class="shell page-hero-grid">
+<section class:list={{ "page-hero": true, "page-hero-compact": compact, "page-hero-with-art": image }}>
+  <div class:list={{ shell: true, "page-hero-grid": true, "page-hero-text-only": !image }}>
     <div class="page-hero-copy">
       <span class="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{text}</p>
     </div>

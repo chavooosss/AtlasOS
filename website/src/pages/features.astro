@@ -1,93 +1,54 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
-import AtlasPreview from "../components/AtlasPreview.astro";
+import ProductCapture from "../components/ProductCapture.astro";
 import PageHero from "../components/PageHero.astro";
-import IconCard from "../components/IconCard.astro";
 ---
 
 <SiteLayout
   title="Features"
   active="/features/"
-  description="Explore AtlasOS desktop, education workflows, diagnostics, and custom UEFI boot frontend."
+  description="Explore AtlasOS desktop, education workflows, diagnostics, and its custom UEFI boot frontend."
 >
   <PageHero
     eyebrow="The Atlas experience"
     title="A Linux environment shaped around the lesson."
-    text="AtlasOS combines a classroom-oriented desktop with familiar Linux foundations. The project is actively developing, and each capability has a clearly documented scope."
-    image="/AtlasOS/images/atlas-landscape.png"
-    imageAlt="AtlasOS blue mountain landscape artwork"
+    text="AtlasOS brings classroom-oriented navigation and system controls to familiar Linux foundations. The project is actively developing, and each capability has a clearly documented scope."
   />
-  <section class="page-content">
+  <section class="page-content feature-story">
     <div class="shell">
-      <div class="content-block">
-        <span class="eyebrow">Product foundations</span><h2>
-          Small, practical pieces that work together.
-        </h2><p>
-          AtlasOS builds on existing Linux services and applications, adding an
-          Atlas desktop and classroom-focused integration around them.
-        </p><div class="feature-grid">
-          <IconCard
-            icon="▧"
-            title="Education-focused environment"
-            text="A home screen and navigation organized around common teaching actions and local resource shortcuts."
-          /><IconCard
-            icon="◈"
-            title="Qt / QML desktop"
-            text="A custom interface with system controls, lesson tools, settings, and device information."
-          /><IconCard
-            icon="⌁"
-            title="Atlas Boot Manager"
-            text="A Rust UEFI application that presents the Atlas boot experience and starts the documented boot backend."
-          /><IconCard
-            icon="◎"
-            title="Interactive-board-first direction"
-            text="Designed with classroom interactive boards in mind; current hardware evidence remains limited."
-          /><IconCard
-            icon="◌"
-            title="Live Linux environment"
-            text="A USB-bootable Live system for evaluation. An installer and in-place upgrade are not currently provided."
-          /><IconCard
-            icon="⌂"
-            title="Open source"
-            text="Atlas-owned source is published under MIT, with third-party components under their own terms."
-          />
+      <article class="feature-story-row">
+        <div class="feature-story-copy">
+          <span class="eyebrow">01 · Before class begins</span>
+          <h2>A clear starting point for the day.</h2>
+          <p>The Atlas desktop places teaching shortcuts and device status in view, while leaving the wider Linux environment available.</p>
+          <a class="text-link" href="/AtlasOS/screenshots/">View the actual desktop capture →</a>
         </div>
-      </div><div class="content-block split">
-        <div>
-          <span class="eyebrow">Custom Boot Manager</span><h2>
-            An Atlas welcome before Linux starts.
-          </h2><p>
-            The UEFI frontend is written in Rust and uses the system firmware
-            graphics interface. In the validated normal path it starts the GRUB
-            backend, then Linux, Casper Live, Plymouth, and the Atlas session.
-          </p><a class="button button-primary" href="/AtlasOS/screenshots/"
-            >See the visual preview →</a>
-        </div><div class="gallery-image boot-preview">
-          <div class="boot-card">
-            <div class="boot-brand">▲ AtlasOS</div><div
-              class="boot-choice active"
-            >
-              Start AtlasOS Live <span style="float:right">›</span>
-            </div><div class="boot-choice">
-              Advanced options <span style="float:right">›</span>
-            </div><div class="boot-choice">
-              System tools <span style="float:right">›</span>
-            </div>
-          </div>
+        <ProductCapture
+          src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+          alt="AtlasOS Live desktop with classroom navigation, resources, lesson tools, and system status"
+          title="AtlasOS Live desktop"
+          caption="A real capture from the current AtlasOS system."
+          kind="desktop"
+        />
+      </article>
+      <article class="feature-story-row feature-story-row-reverse">
+        <div class="feature-story-copy">
+          <span class="eyebrow">02 · A distinct boot identity</span>
+          <h2>An Atlas welcome before Linux starts.</h2>
+          <p>The Rust UEFI frontend presents AtlasOS boot choices and starts the documented backend in the normal validated path.</p>
+          <a class="text-link" href="/AtlasOS/screenshots/">View the actual boot capture →</a>
         </div>
-      </div><div class="content-block split reverse">
-        <div>
-          <span class="eyebrow">Modern desktop experience</span><h2>
-            Keep the next useful action close.
-          </h2><p>
-            Atlas desktop components provide lesson-oriented navigation,
-            application shortcuts, audio and network status, and dock behavior
-            integrated with the existing session.
-          </p><p>
-            What works can vary by device, connected hardware, and Live-session
-            context.
-          </p>
-        </div><AtlasPreview compact={true} />
+        <ProductCapture
+          src="/AtlasOS/images/atlasos-boot-manager.png"
+          alt="AtlasOS boot menu showing Live, Advanced Options, Start from Disk, and System Tools"
+          title="Atlas Boot Manager"
+          caption="A real boot-menu capture. Firmware appearance can vary by device."
+          kind="boot"
+        />
+      </article>
+      <div class="feature-boundary">
+        <span class="eyebrow">Designed for evaluation</span>
+        <p>AtlasOS currently provides a USB-bootable Live environment. It does not include an installer or an in-place upgrade path. Hardware support remains under evaluation.</p>
       </div>
     </div>
   </section>

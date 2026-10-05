@@ -1,7 +1,7 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import PageHero from "../components/PageHero.astro";
-import IconCard from "../components/IconCard.astro";
+import ProductCapture from "../components/ProductCapture.astro";
 ---
 
 <SiteLayout
@@ -13,8 +13,6 @@ import IconCard from "../components/IconCard.astro";
     eyebrow="For the people in the room"
     title="Built around the classroom day."
     text="AtlasOS is an independent project exploring a practical Live Linux environment for teachers, students, and the teams who support classroom devices."
-    image="/AtlasOS/images/atlas-landscape.png"
-    imageAlt="Blue layered landscape from the AtlasOS project artwork"
   />
   <section class="page-content">
     <div class="shell">
@@ -25,40 +23,21 @@ import IconCard from "../components/IconCard.astro";
           The goal is a focused environment that makes common actions easier to
           find while keeping the flexibility of Linux available to technical
           teams.
-        </p><div class="feature-grid">
-          <IconCard
-            icon="▣"
-            title="Designed for interactive boards"
-            text="The project prioritizes classroom displays and touch-oriented use. Compatibility is still being evaluated across devices."
-          /><IconCard
-            icon="✦"
-            title="Simple for teachers"
-            text="A lesson-first home and direct shortcuts aim to reduce the number of steps between starting the system and opening a tool."
-          /><IconCard
-            icon="◎"
-            title="Familiar for students"
-            text="A clear, consistent interface is intended to make shared classroom devices easier to approach."
-          /><IconCard
-            icon="⚙"
-            title="Practical for schools"
-            text="Linux foundations keep the system understandable for maintenance and future school workflows."
-          />
+        </p><div class="education-principles">
+          <article><span>01</span><h3>Designed for interactive boards</h3><p>Readable layouts and touch-oriented use are part of the project direction; device compatibility is still being evaluated.</p></article>
+          <article><span>02</span><h3>Simple for teachers</h3><p>A lesson-first home and direct shortcuts aim to reduce the steps between starting the system and opening a tool.</p></article>
+          <article><span>03</span><h3>Familiar for students</h3><p>A clear, consistent interface is intended to make shared classroom devices easier to approach.</p></article>
         </div>
-      </div><div class="content-block split">
-        <div class="visual-card">
-          <div class="landscape-card">
-            <img
-              src="/AtlasOS/images/atlas-landscape.png"
-              alt="Blue AtlasOS landscape artwork"
-              loading="lazy"
-            /><div class="landscape-overlay">
-              <h3>Room to learn and explore.</h3><p>
-                An independent project for a more focused classroom computing
-                experience.
-              </p>
-            </div>
-          </div>
-        </div><div>
+      </div>
+      <div class="content-block split">
+        <ProductCapture
+          src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+          alt="AtlasOS Live desktop with lesson tools and classroom resources"
+          title="A classroom-oriented Live desktop"
+          caption="An actual AtlasOS session, with its current limits described on this site."
+          kind="desktop"
+        />
+        <div>
           <span class="eyebrow">A better classroom experience</span><h2>
             Useful today, honest about what comes next.
           </h2><p>
@@ -73,7 +52,8 @@ import IconCard from "../components/IconCard.astro";
             what remains open.
           </p>
         </div>
-      </div><div class="cta-band">
+      </div>
+      <div class="cta-band">
         <div>
           <h2>Follow the work in the open.</h2><p>
             Read the roadmap and source to see how the project is progressing.

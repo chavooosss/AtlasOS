@@ -1,0 +1,22 @@
+---
+const {
+  src,
+  alt,
+  title,
+  caption,
+  kind = "desktop",
+  eager = false,
+  className = "",
+} = Astro.props;
+---
+
+<figure class:list={{ "product-capture": true, [`product-capture-${kind}`]: true, [className]: className }}>
+  <div class="product-capture-image">
+    <img src={src} alt={alt} loading={eager ? "eager" : "lazy"} />
+  </div>
+  <figcaption>
+    <span class="capture-kind">AtlasOS product capture</span>
+    <h3>{title}</h3>
+    <p>{caption}</p>
+  </figcaption>
+</figure>
