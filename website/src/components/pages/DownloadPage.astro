@@ -1,0 +1,15 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import { copy, type Locale } from "../../data/i18n";
+import { site } from "../../data/site";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].download;
+---
+<SiteLayout title={t.title} description={t.description}>
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} compact={true} />
+  <section class="page-content"><div class="shell">
+    <div class="status-card"><div class="status-icon" aria-hidden="true">◷</div><div><span class="eyebrow">{t.statusEyebrow}</span><h2>{t.statusTitle}</h2><p>{t.statusText}</p><div class="status-actions"><a class="button button-primary" href={site.repo} target="_blank" rel="noreferrer">{t.source}</a><a class="button" style="background:#edf4ff;color:#163968" href={site.releases} target="_blank" rel="noreferrer">{t.releases}</a></div><p class="status-note">{t.note}</p></div></div>
+    <div class="content-block" style="margin-top:56px"><span class="eyebrow">{t.nextEyebrow}</span><h2>{t.nextTitle}</h2><p>{t.nextText}</p></div>
+  </div></section>
+</SiteLayout>

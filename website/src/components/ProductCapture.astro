@@ -7,15 +7,18 @@ const {
   kind = "desktop",
   eager = false,
   className = "",
+  width = 1600,
+  height = 900,
 } = Astro.props;
+const isTurkish = /(?:^|\/)tr(?:\/|$)/.test(Astro.url.pathname.replace(/^\/AtlasOS/, ""));
 ---
 
 <figure class:list={{ "product-capture": true, [`product-capture-${kind}`]: true, [className]: className }}>
   <div class="product-capture-image">
-    <img src={src} alt={alt} loading={eager ? "eager" : "lazy"} />
+  <img src={src} alt={alt} width={width} height={height} loading={eager ? "eager" : "lazy"} decoding="async" />
   </div>
   <figcaption>
-    <span class="capture-kind">AtlasOS product capture</span>
+    <span class="capture-kind">{isTurkish ? "AtlasOS ürün görüntüsü" : "AtlasOS product capture"}</span>
     <h3>{title}</h3>
     <p>{caption}</p>
   </figcaption>

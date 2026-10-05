@@ -1,0 +1,157 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ProductCapture from "../ProductCapture.astro";
+import { site } from "../../data/site";
+import { copy, type Locale } from "../../data/i18n";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].home;
+const route = (path: string) => `/AtlasOS${locale === "tr" ? "/tr" : ""}${path}`;
+---
+
+<SiteLayout title={t.title} description={t.description} active="/" dark={true} immersive={true}>
+  <section class="intro-scene" id="intro-scene" aria-labelledby="intro-title">
+    <div class="intro-orbit intro-orbit-one" aria-hidden="true"></div>
+    <div class="intro-orbit intro-orbit-two" aria-hidden="true"></div>
+    <div class="shell intro-content">
+      <span class="eyebrow">{t.heroEyebrow}</span>
+      <h1 id="intro-title">{t.heroTitle}</h1>
+      <p>{t.heroText}</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#product-reveal">{t.explore} <span aria-hidden="true">↓</span></a>
+        <a class="button button-secondary" href={site.repo} target="_blank" rel="noreferrer">{t.source}</a>
+      </div>
+      <span class="scroll-cue"><span aria-hidden="true">↓</span> {t.scroll}</span>
+    </div>
+    <div class="intro-index" aria-hidden="true">ATLASOS <span>·</span> CLASSROOM LINUX</div>
+  </section>
+
+  <section class="product-reveal" id="product-reveal" aria-labelledby="product-reveal-title">
+    <div class="shell product-reveal-inner">
+      <div class="scene-heading reveal-on-scroll">
+        <span class="eyebrow">{t.revealEyebrow}</span>
+        <h2 id="product-reveal-title">{t.revealTitle}</h2>
+        <p>{t.revealText}</p>
+      </div>
+      <ProductCapture src="/AtlasOS/images/product/atlasos-desktop-0.6.3-rc.webp" alt={t.desktopAlt} title={t.desktopTitle} caption={t.desktopCaption} kind="desktop" eager={true} width={1920} height={1080} className="cinematic-capture" />
+    </div>
+    <span class="scene-coordinate" aria-hidden="true">01 / THE DESKTOP</span>
+  </section>
+
+  <section class="desktop-story" id="desktop-story" aria-label={t.storyLabel}>
+    <div class="shell story-grid">
+      <div class="story-visual">
+        <div class="story-sticky">
+          <div class="story-photo-frame">
+            <img src="/AtlasOS/images/product/atlasos-desktop-0.6.3-rc.webp" alt={t.desktopAlt} width="1920" height="1080" loading="lazy" decoding="async" />
+          </div>
+          <div class="story-photo-label"><span>{t.storyPhotoLabel}</span><span>{t.storyVersion}</span></div>
+        </div>
+      </div>
+      <div class="story-chapters" aria-label={locale === "tr" ? "Masaüstü yaklaşımı" : "Desktop principles"}>
+        {t.story.map((chapter) => (
+          <article class="story-chapter" data-story-step>
+            <span class="eyebrow">{chapter.eyebrow}</span>
+            <h2>{chapter.title}</h2>
+            <p>{chapter.text}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="classroom-scene" aria-labelledby="classroom-title">
+    <div class="shell classroom-grid">
+      <div class="classroom-copy reveal-on-scroll">
+        <span class="eyebrow">{t.classroomEyebrow}</span>
+        <h2 id="classroom-title">{t.classroomTitle}</h2>
+        <p>{t.classroomText}</p>
+        <ul class="classroom-points">{t.classroomPoints.map((point) => <li>{point}</li>)}</ul>
+      </div>
+      <div class="board-presentation reveal-on-scroll">
+        <div class="board-frame">
+          <img src="/AtlasOS/images/product/atlasos-desktop-0.6.3-rc.webp" alt={t.classroomAlt} width="1920" height="1080" loading="lazy" decoding="async" />
+        </div>
+        <p>{t.classroomCaption}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="boot-scene" id="boot-experience" aria-labelledby="boot-title">
+    <div class="shell boot-scene-grid">
+      <div class="boot-scene-copy reveal-on-scroll">
+        <span class="eyebrow">{t.bootEyebrow}</span>
+        <h2 id="boot-title">{t.bootTitle}</h2>
+        <p>{t.bootText}</p>
+        <a class="text-link" href={route("/screenshots/")}>{t.bootLink}</a>
+      </div>
+      <ProductCapture src="/AtlasOS/images/atlasos-boot-manager.png" alt={t.bootAlt} title="Atlas Boot Manager" caption={t.bootCaption} kind="boot" width={1600} height={900} />
+    </div>
+  </section>
+
+  <section class="principles-scene" aria-labelledby="principles-title">
+    <div class="shell">
+      <div class="principles-heading reveal-on-scroll">
+        <span class="eyebrow">{t.principlesEyebrow}</span>
+        <h2 id="principles-title">{t.principlesTitle}</h2>
+      </div>
+      <div class="principles-list">
+        {t.principles.map((principle, index) => (
+          <article class="principle-row reveal-on-scroll"><span>0{index + 1}</span><h3>{principle.title}</h3><p>{principle.text}</p></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="opensource-scene" aria-labelledby="opensource-title">
+    <div class="shell opensource-inner reveal-on-scroll">
+      <div class="opensource-mark" aria-hidden="true">A</div>
+      <div><span class="eyebrow">{t.openEyebrow}</span><h2 id="opensource-title">{t.openTitle}</h2><p>{t.openText}</p></div>
+      <a class="button button-light" href={site.repo} target="_blank" rel="noreferrer">{t.source}</a>
+    </div>
+  </section>
+
+  <section class="final-scene" aria-labelledby="final-title">
+    <div class="final-glow" aria-hidden="true"></div>
+    <div class="shell final-content reveal-on-scroll">
+        <img src="/AtlasOS/images/atlas-logo-header.png" alt="AtlasOS" width="814" height="303" loading="lazy" decoding="async" />
+      <span class="eyebrow">{t.finalEyebrow}</span>
+      <h2 id="final-title">{t.finalTitle}</h2>
+      <p>{t.finalText}</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href={route("/features/")}>{t.explore} <span aria-hidden="true">→</span></a>
+        <a class="button button-secondary" href={site.repo} target="_blank" rel="noreferrer">{locale === "tr" ? "GitHub’da görüntüle ↗" : "View on GitHub ↗"}</a>
+      </div>
+      <a class="final-screens-link" href={route("/screenshots/")}>{t.finalGallery}</a>
+    </div>
+  </section>
+
+  <script>
+    const storySteps = document.querySelectorAll<HTMLElement>("[data-story-step]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion && "IntersectionObserver" in window && storySteps.length) {
+      document.documentElement.classList.add("story-motion-ready");
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) storySteps.forEach((step) => step.classList.toggle("is-current", step === entry.target));
+        }
+      }, { rootMargin: "-38% 0px -38% 0px", threshold: 0 });
+      storySteps.forEach((step) => observer.observe(step));
+    }
+
+    const revealTargets = document.querySelectorAll<HTMLElement>(".reveal-on-scroll");
+    if ("IntersectionObserver" in window && !reduceMotion) {
+      document.documentElement.classList.add("has-reveal-observer");
+      const revealObserver = new IntersectionObserver((entries, observer) => {
+        for (const entry of entries) if (entry.isIntersecting) { entry.target.classList.add("is-revealed"); observer.unobserve(entry.target); }
+      }, { threshold: 0.16 });
+      revealTargets.forEach((target) => revealObserver.observe(target));
+    } else revealTargets.forEach((target) => target.classList.add("is-revealed"));
+
+    const header = document.querySelector<HTMLElement>("#site-header");
+    const intro = document.querySelector<HTMLElement>("#intro-scene");
+    if (header && intro && "IntersectionObserver" in window) {
+      const headerObserver = new IntersectionObserver(([entry]) => header.classList.toggle("is-condensed", !entry.isIntersecting), { threshold: 0.08 });
+      headerObserver.observe(intro);
+    }
+  </script>
+</SiteLayout>

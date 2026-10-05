@@ -1,6 +1,6 @@
 # AtlasOS product website
 
-This is the static public-facing product site, built with Astro. It is deliberately separate from the AtlasOS runtime and release build. It contains no ISO or historical test screenshots.
+This is the static public-facing product site, built with Astro. It is deliberately separate from the AtlasOS runtime and release build. It contains no ISO artifacts. Product screenshots are genuine AtlasOS captures; the optimized 0.6.3 RC desktop image was captured from the actual Live desktop in QEMU/OVMF at 1920 × 1080 and converted to WebP without changing its interface content.
 
 ## Local development
 
@@ -10,7 +10,7 @@ npm run build
 npm run check
 ```
 
-The generated site is written to `website/dist/`. The smoke check verifies all eight rendered routes, local links/images, page landmarks and titles, local-path leaks, and absence of OS image artifacts.
+The generated site is written to `website/dist/`. The smoke check verifies English and Turkish routes, local links/images, language metadata, authentic gallery captures, page landmarks and titles, local-path leaks, and absence of OS image artifacts.
 
 ## GitHub Pages
 

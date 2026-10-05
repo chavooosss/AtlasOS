@@ -1943,3 +1943,65 @@ a {
   .site-header,
   .header-inner { transition: none !important; }
 }
+
+/* Integrated Atlas branding, locale control, and persistent immersive media. */
+header.site-header .brand,
+.footer-brand .brand {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+header.site-header .brand img,
+.footer-brand .brand img {
+  display: block;
+  width: 154px;
+  height: 58px;
+  object-fit: contain;
+}
+.brand-logo-dark { display: none !important; }
+.immersive-site .site-header:not(.is-condensed) .brand-logo-dark { display: block !important; }
+.immersive-site .site-header:not(.is-condensed) .brand-logo-light { display: none !important; }
+.immersive-site .site-header.is-condensed .brand-logo-dark { display: none !important; }
+.immersive-site .site-header.is-condensed .brand-logo-light { display: block !important; }
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 2px;
+  color: #90a6c2;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.primary-nav .language-switch a {
+  min-width: 28px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  color: #c5d7ee;
+  text-align: center;
+}
+.primary-nav .language-switch a[aria-current="page"] { color: #72d2ff; }
+.primary-nav .language-switch a:hover,
+.primary-nav .language-switch a:focus-visible {
+  color: #fff;
+  outline: 2px solid #76caff;
+  outline-offset: 2px;
+}
+.immersive-site .site-header.is-condensed .language-switch { color: #7c90a8; }
+.immersive-site .site-header.is-condensed .primary-nav .language-switch a { color: #375879; }
+.immersive-site .site-header.is-condensed .primary-nav .language-switch a[aria-current="page"] { color: #126be3; }
+.story-visual { align-self: stretch; }
+
+@media (max-width: 760px) {
+  header.site-header .brand img { width: 139px; height: 52px; }
+  .language-switch { margin: 8px 0 4px; padding: 0 20px; }
+  .immersive-site .primary-nav .language-switch a { color: #375879; }
+  .immersive-site .primary-nav .language-switch a[aria-current="page"] { color: #126be3; }
+  .story-visual { align-self: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-motion-ready .story-chapter,
+  .story-motion-ready .story-chapter.is-current { opacity: 1 !important; transform: none !important; }
+}

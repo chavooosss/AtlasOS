@@ -1,19 +1,38 @@
 ---
-import { navigation, site } from "../data/site";
+import { site } from "../data/site";
+import { copy, localeFromPath, localizedPath } from "../data/i18n";
 import "../styles/global.css";
 const {
-  title = "A thoughtful Linux experience for the classroom",
-  description = "AtlasOS is an education-focused Ubuntu-based Live Linux project for classroom interactive boards.",
+  title = "AtlasOS",
+  description = "A classroom-focused Ubuntu-based Live Linux project.",
   active = "",
   dark = false,
   immersive = false,
 } = Astro.props;
-const path = Astro.url.pathname.replace("/AtlasOS", "") || "/";
+const pathname = Astro.url.pathname;
+const path = pathname.replace(/^\/AtlasOS/, "") || "/";
+const locale = localeFromPath(pathname);
+const t = copy[locale];
 const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
+const pageUrl = `https://chavooosss.github.io/AtlasOS${path}`;
+const englishPath = localizedPath(pathname, "en");
+const turkishPath = localizedPath(pathname, "tr");
+const englishUrl = `https://chavooosss.github.io${englishPath}`;
+const turkishUrl = `https://chavooosss.github.io${turkishPath}`;
+const navItems = [
+  { key: "home", href: "/" },
+  { key: "features", href: "/features/" },
+  { key: "education", href: "/education/" },
+  { key: "screenshots", href: "/screenshots/" },
+  { key: "about", href: "/about/" },
+];
+const navHref = (href) => locale === "tr"
+  ? `/AtlasOS/tr${href === "/" ? "/" : href}`
+  : `/AtlasOS${href}`;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -23,58 +42,60 @@ const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
-    <meta
-      property="og:url"
-      content={`https://chavooosss.github.io/AtlasOS${path}`}
-    />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:locale" content={locale === "tr" ? "tr_TR" : "en_US"} />
+    <meta property="og:site_name" content="AtlasOS" />
     <link rel="icon" type="image/svg+xml" href="/AtlasOS/favicon.svg" />
-    <link
-      rel="canonical"
-      href={`https://chavooosss.github.io/AtlasOS${path}`}
-    />
+    <link rel="canonical" href={pageUrl} />
+    <link rel="alternate" hreflang="en" href={englishUrl} />
+    <link rel="alternate" hreflang="tr" href={turkishUrl} />
+    <link rel="alternate" hreflang="x-default" href={englishUrl} />
     <title>{pageTitle}</title>
   </head>
   <body class:list={{ "theme-dark": dark, "immersive-site": immersive }}>
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">{locale === "tr" ? "İçeriğe geç" : "Skip to content"}</a>
     <header class="site-header" id="site-header">
       <div class="header-inner shell">
-        <a class="brand" href="/AtlasOS/" aria-label="AtlasOS home">
-          <img
-            src="/AtlasOS/images/atlas-logo.png"
-            alt="AtlasOS"
-            width="132"
-            height="49"
-          />
+        <a class="brand" href={navHref("/")} aria-label={locale === "tr" ? "AtlasOS ana sayfa" : "AtlasOS home"}>
+          <img class="brand-logo-dark" src="/AtlasOS/images/atlas-logo-header.png" alt="AtlasOS" width="162" height="60" />
+          <img class="brand-logo-light" src="/AtlasOS/images/atlas-logo.png" alt="" aria-hidden="true" width="162" height="60" />
         </a>
         <button
           class="menu-toggle"
           type="button"
           aria-expanded="false"
           aria-controls="primary-nav"
-          aria-label="Open navigation menu"
+          aria-label={t.nav.openMenu}
+          data-open-label={t.nav.openMenu}
+          data-close-label={t.nav.closeMenu}
           ><span></span><span></span><span></span></button
         >
         <nav
           id="primary-nav"
           class="primary-nav"
-          aria-label="Primary navigation"
+          aria-label={locale === "tr" ? "Ana gezinme" : "Primary navigation"}
         >
           {
-            navigation.map((item) => (
+            navItems.map((item) => (
               <a
-                href={`/AtlasOS${item.href === "/" ? "/" : item.href}`}
+                href={navHref(item.href)}
                 class:list={{ active: active === item.href }}
                 aria-current={active === item.href ? "page" : undefined}
               >
-                {item.label}
+                {t.nav[item.key]}
               </a>
             ))
           }
+          <div class="language-switch" aria-label={t.nav.language}>
+            <a href={englishPath} lang="en" aria-label="English" aria-current={locale === "en" ? "page" : undefined} class:list={{ active: locale === "en" }}>EN</a>
+            <span aria-hidden="true">/</span>
+            <a href={turkishPath} lang="tr" aria-label="Türkçe" aria-current={locale === "tr" ? "page" : undefined} class:list={{ active: locale === "tr" }}>TR</a>
+          </div>
           <a
             class="nav-github"
             href={site.repo}
             target="_blank"
-            rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a
+            rel="noreferrer">{t.nav.github} <span aria-hidden="true">↗</span></a
           >
         </nav>
       </div>
@@ -83,7 +104,7 @@ const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
     <footer class="site-footer">
       <div class="shell footer-main">
         <div class="footer-brand">
-          <a class="brand" href="/AtlasOS/"
+          <a class="brand" href={navHref("/")}
             ><img
               src="/AtlasOS/images/atlas-logo.png"
               alt="AtlasOS"
@@ -91,29 +112,27 @@ const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
               height="49"
             /></a
           ><p>
-            An independent open-source project exploring a better classroom
-            Linux experience.
+            {t.footer.summary}
           </p>
         </div>
         <div class="footer-links">
-          <span class="eyebrow">Explore</span><a href="/AtlasOS/features/"
-            >Features</a
-          ><a href="/AtlasOS/education/">For Education</a><a
-            href="/AtlasOS/screenshots/">Screenshots</a>
+          <span class="eyebrow">{t.footer.explore}</span><a href={navHref("/features/")}
+            >{t.nav.features}</a
+          ><a href={navHref("/education/")}>{t.nav.education}</a><a
+            href={navHref("/screenshots/")}>{t.nav.screenshots}</a>
         </div>
         <div class="footer-links">
-          <span class="eyebrow">Project</span><a
+          <span class="eyebrow">{locale === "tr" ? "Proje" : "Project"}</span><a
             href={site.repo}
             target="_blank"
-            rel="noreferrer">Source on GitHub ↗</a
-          ><a href={site.roadmap}>Roadmap</a><a href={site.security}>Security</a
-          ><a href={site.license}>MIT License</a>
+            rel="noreferrer">{locale === "tr" ? "GitHub’da kaynak kodu ↗" : "Source on GitHub ↗"}</a
+          ><a href={site.roadmap}>{locale === "tr" ? "Yol haritası" : "Roadmap"}</a><a href={site.security}>{locale === "tr" ? "Güvenlik" : "Security"}</a
+          ><a href={site.license}>{locale === "tr" ? "MIT Lisansı" : "MIT License"}</a>
         </div>
       </div>
       <div class="shell footer-bottom">
         <span>© {new Date().getFullYear()} AtlasOS contributors</span><span
-          >Independent project · Not affiliated with Ubuntu or any education
-          service</span>
+          >{t.footer.disclaimer}</span>
       </div>
     </footer>
     <script>
@@ -122,6 +141,7 @@ const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
       toggle?.addEventListener("click", () => {
         const expanded = toggle.getAttribute("aria-expanded") === "true";
         toggle.setAttribute("aria-expanded", String(!expanded));
+      toggle.setAttribute("aria-label", !expanded ? toggle.dataset.closeLabel || "Close navigation menu" : toggle.dataset.openLabel || "Open navigation menu");
         nav?.classList.toggle("open", !expanded);
       });
     </script>

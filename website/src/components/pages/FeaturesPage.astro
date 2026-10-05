@@ -1,0 +1,21 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import ProductCapture from "../ProductCapture.astro";
+import { copy, type Locale } from "../../data/i18n";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].features;
+const screenshots = locale === "tr" ? "/AtlasOS/tr/screenshots/" : "/AtlasOS/screenshots/";
+---
+<SiteLayout title={t.title} description={t.description} active="/features/">
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} />
+  <section class="page-content feature-story"><div class="shell">
+    {t.rows.map((row, index) => (
+      <article class:list={{ "feature-story-row": true, "feature-story-row-reverse": index === 1 }}>
+        <div class="feature-story-copy"><span class="eyebrow">{row.eyebrow}</span><h2>{row.title}</h2><p>{row.text}</p><a class="text-link" href={screenshots}>{row.link}</a></div>
+        <ProductCapture src={row.image} alt={row.imageAlt} title={row.imageTitle} caption={row.caption} kind={index === 1 ? "boot" : "desktop"} width={index === 1 ? 1600 : 1920} height={index === 1 ? 900 : 1080} />
+      </article>
+    ))}
+    <div class="feature-boundary"><span class="eyebrow">{t.boundaryEyebrow}</span><p>{t.boundary}</p></div>
+  </div></section>
+</SiteLayout>
