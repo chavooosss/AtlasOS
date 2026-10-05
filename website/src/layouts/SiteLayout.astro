@@ -6,6 +6,7 @@ const {
   description = "AtlasOS is an education-focused Ubuntu-based Live Linux project for classroom interactive boards.",
   active = "",
   dark = false,
+  immersive = false,
 } = Astro.props;
 const path = Astro.url.pathname.replace("/AtlasOS", "") || "/";
 const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
@@ -33,9 +34,9 @@ const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
     />
     <title>{pageTitle}</title>
   </head>
-  <body class:list={{ "theme-dark": dark }}>
+  <body class:list={{ "theme-dark": dark, "immersive-site": immersive }}>
     <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-header">
+    <header class="site-header" id="site-header">
       <div class="header-inner shell">
         <a class="brand" href="/AtlasOS/" aria-label="AtlasOS home">
           <img

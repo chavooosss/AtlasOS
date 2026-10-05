@@ -1,127 +1,43 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import PageHero from "../components/PageHero.astro";
-import AtlasPreview from "../components/AtlasPreview.astro";
+import ProductCapture from "../components/ProductCapture.astro";
 ---
 
 <SiteLayout
   title="Screenshots"
   active="/screenshots/"
-  description="A visual preview of the AtlasOS desktop and UEFI boot experience."
+  description="Two authentic product captures from the AtlasOS desktop and UEFI boot experience."
 >
   <PageHero
-    eyebrow="A look at AtlasOS"
-    title="The interface, in progress."
-    text="Explore the visual direction of the Atlas desktop and Boot Manager. Product previews below are rendered interface illustrations, not device screenshots."
-    image="/AtlasOS/images/atlas-landscape.png"
-    imageAlt="AtlasOS blue landscape artwork"
+    eyebrow="Current AtlasOS captures"
+    title="The product, as it is."
+    text="These two images show the AtlasOS Live desktop and Atlas Boot Manager. The gallery contains actual product captures only."
   />
   <section class="page-content">
     <div class="shell">
-      <p class="gallery-note">
-        <strong>About these visuals:</strong> The Atlas desktop panel is an HTML
-        illustration based on documented interface areas. It is not a captured product
-        screen. We will add sanitized product screenshots when publication-cleared
-        captures are available.
-      </p><div
-        class="screenshot-tabs"
-        role="group"
-        aria-label="Filter visual categories"
-      >
-        <button
-          class="tab active"
-          type="button"
-          data-filter="all"
-          aria-pressed="true">All</button
-        ><button
-          class="tab"
-          type="button"
-          data-filter="desktop"
-          aria-pressed="false">Desktop</button
-        ><button
-          class="tab"
-          type="button"
-          data-filter="boot"
-          aria-pressed="false">Boot Manager</button
-        ><button
-          class="tab"
-          type="button"
-          data-filter="classroom"
-          aria-pressed="false">Classroom</button>
-      </div><div class="gallery">
-        <article class="gallery-item featured" data-category="desktop">
-          <div class="gallery-image"><AtlasPreview compact={true} /></div><div
-            class="gallery-caption"
-          >
-            <h3>Atlas desktop · illustrative preview</h3><p>
-              A visual model of the home screen, status area, lesson shortcuts,
-              and dock.
-            </p>
-          </div>
-        </article><article class="gallery-item" data-category="boot">
-          <div class="gallery-image boot-preview">
-            <div class="boot-card">
-              <div class="boot-brand">▲ AtlasOS</div><div
-                class="boot-choice active"
-              >
-                Start AtlasOS Live <span style="float:right">›</span>
-              </div><div class="boot-choice">
-                Advanced options <span style="float:right">›</span>
-              </div><div class="boot-choice">
-                Start from disk <span style="float:right">›</span>
-              </div>
-            </div>
-          </div><div class="gallery-caption">
-            <h3>Atlas Boot Manager</h3><p>
-              Illustrative menu preview; actual firmware presentation depends on
-              hardware.
-            </p>
-          </div>
-        </article><article class="gallery-item" data-category="classroom">
-          <div class="gallery-image education-art">
-            <img
-              src="/AtlasOS/images/atlas-landscape.png"
-              alt="Layered blue scenic artwork from AtlasOS"
-              loading="lazy"
-            />
-          </div><div class="gallery-caption">
-            <h3>Atlas visual identity</h3><p>
-              Project artwork used in the Atlas boot experience.
-            </p>
-          </div>
-        </article><article class="gallery-item" data-category="desktop">
-          <div class="gallery-image"><AtlasPreview compact={true} /></div><div
-            class="gallery-caption"
-          >
-            <h3>System status and tools</h3><p>
-              The Atlas interface includes access to system status and classroom
-              tools.
-            </p>
-          </div>
-        </article>
+      <div class="gallery gallery-authentic" aria-label="AtlasOS product captures">
+        <ProductCapture
+          src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+          alt="AtlasOS Live desktop with classroom navigation, teaching shortcuts, system status, and lesson schedule"
+          title="AtlasOS Live desktop"
+          caption="A real desktop capture from AtlasOS 0.6.2."
+          kind="desktop"
+          eager={true}
+        />
+        <ProductCapture
+          src="/AtlasOS/images/atlasos-boot-manager.png"
+          alt="AtlasOS boot menu showing Start Live, Advanced Options, Start from Disk, and System Tools"
+          title="Atlas Boot Manager"
+          caption="A real boot-menu capture. Firmware appearance can vary by device."
+          kind="boot"
+        />
       </div>
+      <p class="gallery-footnote">
+        Only approved AtlasOS product captures appear as product imagery on this
+        page. Brand artwork elsewhere is decorative and does not depict the
+        running interface.
+      </p>
     </div>
   </section>
-  <script>
-    const filters = document.querySelectorAll<HTMLButtonElement>(
-      ".screenshot-tabs [data-filter]",
-    );
-    const items = document.querySelectorAll<HTMLElement>(
-      ".gallery [data-category]",
-    );
-    filters.forEach((filter) =>
-      filter.addEventListener("click", () => {
-        const category = filter.dataset.filter;
-        filters.forEach((button) => {
-          const selected = button === filter;
-          button.classList.toggle("active", selected);
-          button.setAttribute("aria-pressed", String(selected));
-        });
-        items.forEach((item) => {
-          item.hidden =
-            category !== "all" && item.dataset.category !== category;
-        });
-      }),
-    );
-  </script>
 </SiteLayout>

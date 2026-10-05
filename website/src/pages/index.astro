@@ -1,7 +1,6 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
-import AtlasPreview from "../components/AtlasPreview.astro";
-import IconCard from "../components/IconCard.astro";
+import ProductCapture from "../components/ProductCapture.astro";
 import { site } from "../data/site";
 ---
 
@@ -9,117 +8,211 @@ import { site } from "../data/site";
   title="AtlasOS"
   active="/"
   dark={true}
-  description="A modern Linux experience for interactive classrooms. Discover AtlasOS, an education-focused Ubuntu-based Live Linux project."
+  immersive={true}
+  description="A calmer Linux experience for the classroom. AtlasOS is an education-focused Ubuntu-based Live Linux project."
 >
-  <section class="hero">
-    <div class="shell hero-grid">
-      <div class="hero-copy reveal">
-        <span class="eyebrow">A classroom-focused Linux project</span><h1>
-          A thoughtful Linux experience for the classroom.
-        </h1><p>
-          AtlasOS explores a calmer, more focused way to use Linux in
-          interactive classrooms — with teaching tools and system controls close
-          at hand.
-        </p><div class="hero-actions">
-          <a class="button button-primary" href="/AtlasOS/features/"
-            >Explore AtlasOS <span aria-hidden="true">→</span></a
-          ><a
-            class="button button-secondary"
-            href={site.repo}
-            target="_blank"
-            rel="noreferrer">View source on GitHub ↗</a>
-        </div><div class="hero-note">
-          Ubuntu-based Live environment · Open source · In development
-        </div>
-      </div><div class="hero-art reveal reveal-delay"><AtlasPreview /></div>
-    </div><div class="shell hero-metrics">
-      <div class="hero-metric">
-        <span class="metric-icon">✦</span> Designed around classroom workflows
-      </div><div class="hero-metric">
-        <span class="metric-icon">⌘</span> Built on Linux foundations
-      </div><div class="hero-metric">
-        <span class="metric-icon">↗</span> Developed in the open
+  <section class="intro-scene" id="intro-scene" aria-labelledby="intro-title">
+    <div class="intro-orbit intro-orbit-one" aria-hidden="true"></div>
+    <div class="intro-orbit intro-orbit-two" aria-hidden="true"></div>
+    <div class="shell intro-content">
+      <span class="eyebrow">An independent classroom Linux project</span>
+      <h1 id="intro-title">A calmer Linux experience for the classroom.</h1>
+      <p>
+        AtlasOS brings a classroom-focused desktop and familiar Linux foundations
+        together in a Live environment shaped around the school day.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#product-reveal">Explore AtlasOS <span aria-hidden="true">↓</span></a>
+        <a class="button button-secondary" href={site.repo} target="_blank" rel="noreferrer">View source on GitHub ↗</a>
       </div>
+      <span class="scroll-cue"><span aria-hidden="true">↓</span> Scroll to explore</span>
     </div>
+    <div class="intro-index" aria-hidden="true">ATLASOS <span>·</span> CLASSROOM LINUX</div>
   </section>
-  <section class="section">
-    <div class="shell">
-      <div class="section-heading">
-        <span class="eyebrow">The Atlas approach</span><h2>
-          Useful details, within reach.
-        </h2><p>
-          AtlasOS brings a classroom-minded interface to established Linux
-          components. The goal is a familiar place to start a lesson, reach
-          common tools, and understand the device at a glance.
-        </p>
-      </div><div class="pillars">
-        <IconCard
-          icon="▦"
-          title="Education focused"
-          text="A desktop organized around lesson tools, resources, and the classroom day."
-        /><IconCard
-          icon="◈"
-          title="Modern desktop"
-          text="A custom Qt and QML shell built for clear, touch-friendly interactions."
-        /><IconCard
-          icon="⌁"
-          title="Custom boot experience"
-          text="A Rust-based UEFI frontend created for the AtlasOS identity."
-        /><IconCard
-          icon="⌂"
-          title="Open development"
-          text="Source code and project decisions are available for review on GitHub."
-        />
+
+  <section class="product-reveal" id="product-reveal" aria-labelledby="product-reveal-title">
+    <div class="shell product-reveal-inner">
+      <div class="scene-heading reveal-on-scroll">
+        <span class="eyebrow">A clear place to begin</span>
+        <h2 id="product-reveal-title">Meet the AtlasOS desktop.</h2>
+        <p>A real view of the current Live system, captured as it runs.</p>
       </div>
+      <ProductCapture
+        src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+        alt="AtlasOS 0.6.2 Live desktop showing lesson tools, system status, and today's lesson panel"
+        title="AtlasOS Live desktop"
+        caption="A real AtlasOS 0.6.2 session capture."
+        kind="desktop"
+        eager={true}
+        className="cinematic-capture"
+      />
     </div>
+    <span class="scene-coordinate" aria-hidden="true">01 / THE DESKTOP</span>
   </section>
-  <section class="section-tight">
-    <div class="shell split">
-      <div class="content-block">
-        <span class="eyebrow">Made for the classroom rhythm</span><h2>
-          Classrooms deserve software that feels considered.
-        </h2><p>
-          Teachers move between materials, displays, and the next part of a
-          lesson. AtlasOS is an ongoing project to make those everyday steps
-          easier to discover without hiding the Linux system beneath.
-        </p><div
-          class="benefit-grid"
-          style="grid-template-columns:1fr 1fr;margin-top:24px"
-        >
-          <div class="benefit">
-            <div class="icon-tile">✎</div><h3>Teaching tools</h3><p>
-              Shortcuts for files, presentations, video, whiteboard, and screen
-              annotation.
-            </p>
-          </div><div class="benefit">
-            <div class="icon-tile">◉</div><h3>Visible system state</h3><p>
-              Quick access to sound, network, display, and device information.
-            </p>
+
+  <section class="desktop-story" id="desktop-story" aria-label="The AtlasOS desktop experience">
+    <div class="shell story-grid">
+      <div class="story-visual">
+        <div class="story-sticky">
+          <div class="story-photo-frame">
+            <img
+              src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+              alt="Actual AtlasOS desktop capture with navigation, classroom resources, teaching tools, and lesson schedule"
+              loading="lazy"
+            />
           </div>
+          <div class="story-photo-label"><span>AtlasOS Live desktop</span><span>0.6.2 · product capture</span></div>
         </div>
-      </div><div class="visual-card">
-        <div class="landscape-card">
+      </div>
+      <div class="story-chapters" aria-label="Desktop principles">
+        <article class="story-chapter is-current" data-story-step>
+          <span class="eyebrow">01 · Made for the room</span>
+          <h2>Built around the classroom.</h2>
+          <p>A home screen brings lesson tools and system information into a familiar starting place.</p>
+        </article>
+        <article class="story-chapter" data-story-step>
+          <span class="eyebrow">02 · The everyday tools</span>
+          <h2>Teaching tools, close at hand.</h2>
+          <p>Shortcuts for common classroom tasks sit beside access to the wider Linux desktop.</p>
+        </article>
+        <article class="story-chapter" data-story-step>
+          <span class="eyebrow">03 · Room to focus</span>
+          <h2>Less searching. More teaching.</h2>
+          <p>AtlasOS explores a clearer way to find the next useful action on a shared classroom screen.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="classroom-scene" aria-labelledby="classroom-title">
+    <div class="shell classroom-grid">
+      <div class="classroom-copy reveal-on-scroll">
+        <span class="eyebrow">Designed with interactive classrooms in mind</span>
+        <h2 id="classroom-title">A bigger screen deserves a clearer rhythm.</h2>
+        <p>AtlasOS is designed around readable layouts, direct navigation, and touch-friendly thinking. Device support is still being evaluated.</p>
+        <ul class="classroom-points">
+          <li>Clear paths to lesson tools</li>
+          <li>Visible sound, network, and display state</li>
+          <li>A familiar Linux desktop underneath</li>
+        </ul>
+      </div>
+      <div class="board-presentation reveal-on-scroll">
+        <div class="board-frame">
           <img
-            src="/AtlasOS/images/atlas-landscape.png"
-            alt="Layered blue mountain and city landscape used in AtlasOS visual identity"
+            src="/AtlasOS/images/atlasos-live-desktop.jpeg"
+            alt="AtlasOS Live desktop presented inside a stylized display frame"
             loading="lazy"
-          /><div class="landscape-overlay">
-            <h3>A clearer start to the lesson.</h3><p>
-              Designed for focus, with the classroom in mind.
-            </p>
-          </div>
+          />
         </div>
+        <p>Presentation framing around an actual AtlasOS capture · not a classroom photograph</p>
       </div>
     </div>
   </section>
-  <section class="section">
-    <div class="shell cta-band">
-      <div>
-        <h2>See how AtlasOS is taking shape.</h2><p>
-          Explore the product, read the project source, and follow its progress.
-        </p>
-      </div><a class="button button-light" href="/AtlasOS/about/"
-        >About the project <span aria-hidden="true">→</span></a>
+
+  <section class="boot-scene" id="boot-experience" aria-labelledby="boot-title">
+    <div class="shell boot-scene-grid">
+      <div class="boot-scene-copy reveal-on-scroll">
+        <span class="eyebrow">Before the desktop</span>
+        <h2 id="boot-title">A boot experience built for AtlasOS.</h2>
+        <p>The Atlas Boot Manager is a UEFI frontend created for the project. Here is its real menu capture.</p>
+        <a class="text-link" href="/AtlasOS/screenshots/">See both product captures →</a>
+      </div>
+      <ProductCapture
+        src="/AtlasOS/images/atlasos-boot-manager.png"
+        alt="AtlasOS Boot Manager showing Start AtlasOS Live, Advanced Options, Start from Disk, and System Tools"
+        title="Atlas Boot Manager"
+        caption="A real boot-menu capture. Firmware appearance can vary by device."
+        kind="boot"
+        className="boot-scene-capture"
+      />
     </div>
   </section>
+
+  <section class="principles-scene" aria-labelledby="principles-title">
+    <div class="shell">
+      <div class="principles-heading reveal-on-scroll">
+        <span class="eyebrow">A few guiding ideas</span>
+        <h2 id="principles-title">Technology should make the lesson feel simpler.</h2>
+      </div>
+      <div class="principles-list">
+        <article class="principle-row reveal-on-scroll"><span>01</span><h3>Education first</h3><p>Start with the routines and tools that make up a classroom day.</p></article>
+        <article class="principle-row reveal-on-scroll"><span>02</span><h3>Focused interface</h3><p>Make common actions easier to find, while keeping the desktop flexible.</p></article>
+        <article class="principle-row reveal-on-scroll"><span>03</span><h3>Open source</h3><p>Keep project code and decisions available for people to inspect.</p></article>
+        <article class="principle-row reveal-on-scroll"><span>04</span><h3>Designed for large displays</h3><p>Think about readability and touch from the start; validate support device by device.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="opensource-scene" aria-labelledby="opensource-title">
+    <div class="shell opensource-inner reveal-on-scroll">
+      <div class="opensource-mark" aria-hidden="true">A</div>
+      <div>
+        <span class="eyebrow">Built in the open</span>
+        <h2 id="opensource-title">See how AtlasOS is taking shape.</h2>
+        <p>Read the source, explore the architecture, and follow the project as it develops.</p>
+      </div>
+      <a class="button button-light" href={site.repo} target="_blank" rel="noreferrer">View source on GitHub ↗</a>
+    </div>
+  </section>
+
+  <section class="final-scene" aria-labelledby="final-title">
+    <div class="final-glow" aria-hidden="true"></div>
+    <div class="shell final-content reveal-on-scroll">
+      <img src="/AtlasOS/images/atlas-logo.png" alt="AtlasOS" width="210" height="78" loading="lazy" />
+      <span class="eyebrow">A project in progress</span>
+      <h2 id="final-title">The classroom deserves software built with it in mind.</h2>
+      <p>Follow the work, explore the real product captures, and see what comes next.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="/AtlasOS/features/">Explore AtlasOS <span aria-hidden="true">→</span></a>
+        <a class="button button-secondary" href={site.repo} target="_blank" rel="noreferrer">View on GitHub ↗</a>
+      </div>
+      <a class="final-screens-link" href="/AtlasOS/screenshots/">View current product captures</a>
+    </div>
+  </section>
+
+  <script>
+    const storySteps = document.querySelectorAll<HTMLElement>("[data-story-step]");
+    if ("IntersectionObserver" in window && storySteps.length) {
+      document.documentElement.classList.add("story-motion-ready");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            storySteps.forEach((step) => step.classList.toggle("is-current", step === entry.target));
+          }
+        },
+        { rootMargin: "-38% 0px -38% 0px", threshold: 0 },
+      );
+      storySteps.forEach((step) => observer.observe(step));
+    }
+
+    const revealTargets = document.querySelectorAll<HTMLElement>(".reveal-on-scroll");
+    if ("IntersectionObserver" in window && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.classList.add("has-reveal-observer");
+      const revealObserver = new IntersectionObserver(
+        (entries, observer) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-revealed");
+              observer.unobserve(entry.target);
+            }
+          }
+        },
+        { threshold: 0.16 },
+      );
+      revealTargets.forEach((target) => revealObserver.observe(target));
+    } else {
+      revealTargets.forEach((target) => target.classList.add("is-revealed"));
+    }
+
+    const header = document.querySelector<HTMLElement>("#site-header");
+    const intro = document.querySelector<HTMLElement>("#intro-scene");
+    if (header && intro && "IntersectionObserver" in window) {
+      const headerObserver = new IntersectionObserver(
+        ([entry]) => header.classList.toggle("is-condensed", !entry.isIntersecting),
+        { threshold: 0.08 },
+      );
+      headerObserver.observe(intro);
+    }
+  </script>
 </SiteLayout>
