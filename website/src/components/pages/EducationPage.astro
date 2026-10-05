@@ -1,0 +1,22 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import ProductCapture from "../ProductCapture.astro";
+import { copy, type Locale } from "../../data/i18n";
+import { site } from "../../data/site";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].education;
+---
+<SiteLayout title={t.title} description={t.description} active="/education/">
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} />
+  <section class="page-content"><div class="shell">
+    <div class="content-block"><span class="eyebrow">{t.sectionEyebrow}</span><h2>{t.sectionTitle}</h2><p>{t.sectionText}</p>
+      <div class="education-principles">{t.principles.map((item, index) => <article><span>0{index + 1}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
+    </div>
+    <div class="content-block split">
+      <ProductCapture src="/AtlasOS/images/product/atlasos-desktop-0.6.3-rc.webp" alt={t.imageAlt} title={t.imageTitle} caption={t.imageCaption} kind="desktop" width={1920} height={1080} />
+      <div><span class="eyebrow">{t.nextEyebrow}</span><h2>{t.nextTitle}</h2><p>{t.nextText1}</p><p>{t.nextText2}</p></div>
+    </div>
+    <div class="cta-band"><div><h2>{t.ctaTitle}</h2><p>{t.ctaText}</p></div><a class="button button-light" href={site.roadmap} target="_blank" rel="noreferrer">{t.cta}</a></div>
+  </div></section>
+</SiteLayout>

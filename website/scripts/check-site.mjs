@@ -3,7 +3,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const root = resolve('dist');
-const routes = ['', 'features', 'education', 'screenshots', 'about', 'download', 'community', '404'];
+const routes = [
+  '', 'features', 'education', 'screenshots', 'about', 'download', 'community', '404',
+  'tr', 'tr/features', 'tr/education', 'tr/screenshots', 'tr/about', 'tr/download', 'tr/community', 'tr/404',
+];
 assert.ok(existsSync(root), 'Build website first with npm run build.');
 
 for (const route of routes) {
@@ -12,6 +15,12 @@ for (const route of routes) {
   const html = readFileSync(file, 'utf8');
   assert.match(html, /<main\b/, `Route has no main landmark: /${route}/`);
   assert.match(html, /<title>[^<]+<\/title>/, `Route has no title: /${route}/`);
+  const expectedLanguage = route.startsWith('tr') ? 'tr' : 'en';
+  assert.match(html, new RegExp(`<html[^>]+lang="${expectedLanguage}"`), `Wrong document language on /${route}/`);
+  assert.match(html, /hreflang="en"/, `Missing English alternate on /${route}/`);
+  assert.match(html, /hreflang="tr"/, `Missing Turkish alternate on /${route}/`);
+  assert.match(html, /rel="canonical"/, `Missing canonical URL on /${route}/`);
+  assert.match(html, /class="language-switch"[\s\S]*?lang="en"[\s\S]*?lang="tr"/, `Missing bilingual language switch on /${route}/`);
   assert.doesNotMatch(html, /(?:C:\\Users\\|C:\\velican\\|\/mnt\/[cd]\/|\/home\/no-labell\/)/i, `Local path leaked into /${route}/`);
   assert.doesNotMatch(html, /AtlasOS-[\w.-]+\.iso/i, `ISO artifact name leaked into /${route}/`);
 }
@@ -43,11 +52,44 @@ const sourceFiles = walk(resolve('src')).filter((path) => /\.(?:astro|css|ts|js)
 const source = sourceFiles.map((path) => readFileSync(path, 'utf8')).join('\n');
 assert.doesNotMatch(source, /AtlasPreview|class=["']desktop-preview|class=["']boot-card/i, 'Fabricated AtlasOS interface markup must not return.');
 
-const screenshotPage = readFileSync(join(root, 'screenshots', 'index.html'), 'utf8');
-for (const image of ['atlasos-live-desktop.jpeg', 'atlasos-boot-manager.png']) {
-  assert.match(screenshotPage, new RegExp(`/AtlasOS/images/${image.replaceAll('.', '\\.')}`), `Approved real product image missing from Screenshots: ${image}`);
+for (const screenshotPath of [join(root, 'screenshots', 'index.html'), join(root, 'tr', 'screenshots', 'index.html')]) {
+  const html = readFileSync(screenshotPath, 'utf8');
+  for (const image of ['atlasos-desktop-0.6.3-rc.webp', 'atlasos-live-desktop.jpeg', 'atlasos-boot-manager.png']) {
+    assert.match(html, new RegExp(`/AtlasOS/images/(?:product/)?${image.replaceAll('.', '\\.')}`), `Authentic product capture missing from ${screenshotPath}: ${image}`);
+  }
+  assert.equal((html.match(/class="product-capture /g) || []).length, 3, `Expected three authentic captures in ${screenshotPath}.`);
+  assert.doesNotMatch(html, /illustrative|mockup|simulation/i, `Screenshots must not describe fabricated product imagery: ${screenshotPath}`);
+  const galleryFigures = [...html.matchAll(/<figure class="product-capture [\s\S]*?<\/figure>/g)].map(([figure]) => figure);
+  assert.equal(galleryFigures.length, 3, `Expected three product gallery figures in ${screenshotPath}.`);
+  for (const figure of galleryFigures) {
+    assert.match(figure, /<img\b[^>]+\balt="[^"]+"[^>]+\bwidth="\d+"[^>]+\bheight="\d+"/, `Gallery image needs useful alt text and intrinsic dimensions: ${screenshotPath}`);
+  }
 }
-assert.equal((screenshotPage.match(/class="product-capture /g) || []).length, 2, 'Screenshots must present exactly two approved product captures.');
-assert.doesNotMatch(screenshotPage, /illustrative|mockup|simulation/i, 'Screenshots page must not describe fabricated product imagery.');
 
-console.log(`Website smoke check passed: ${routes.length} routes, ${htmlFiles.length} HTML files, local links/images resolved, two authentic captures verified.`);
+for (const route of ['', 'features', 'education', 'screenshots', 'about', 'download', 'community']) {
+  const html = readFileSync(join(root, route, 'index.html'), 'utf8');
+  assert.match(html, /hreflang="tr"[^>]+href="https:\/\/chavooosss\.github\.io\/AtlasOS\/tr/, `English route lacks a Turkish equivalent: /${route}/`);
+}
+for (const route of ['tr', 'tr/features', 'tr/education', 'tr/screenshots', 'tr/about', 'tr/download', 'tr/community']) {
+  const html = readFileSync(join(root, route, 'index.html'), 'utf8');
+  assert.match(html, /hreflang="en"[^>]+href="https:\/\/chavooosss\.github\.io\/AtlasOS\/(?!tr\/)/, `Turkish route lacks an English equivalent: /${route}/`);
+}
+const sitemap = readFileSync(join(root, 'sitemap.xml'), 'utf8');
+for (const route of ['features', 'education', 'screenshots', 'about', 'download', 'community']) {
+  assert.ok(sitemap.includes(`https://chavooosss.github.io/AtlasOS/${route}/`), `Sitemap lacks English route /${route}/.`);
+  assert.ok(sitemap.includes(`https://chavooosss.github.io/AtlasOS/tr/${route}/`), `Sitemap lacks Turkish route /tr/${route}/.`);
+}
+assert.ok(sitemap.includes('xmlns:xhtml='), 'Sitemap lacks xhtml namespace for localized alternates.');
+
+const homeSource = readFileSync(resolve('src/components/pages/HomePage.astro'), 'utf8');
+assert.match(homeSource, /prefers-reduced-motion:\s*reduce/, 'Immersive story must respect reduced-motion preferences.');
+const styles = readFileSync(resolve('src/styles/global.css'), 'utf8');
+assert.match(styles, /\.story-visual\s*\{\s*align-self:\s*stretch\s*;/, 'Sticky desktop-story image must span the chapter track.');
+const layout = readFileSync(resolve('src/layouts/SiteLayout.astro'), 'utf8');
+assert.match(layout, /atlas-logo-header\.png/, 'Transparent dark-header logo variant is missing.');
+assert.match(layout, /hreflang="x-default"/, 'Default locale metadata is missing.');
+assert.match(readFileSync(resolve('src/components/pages/NotFoundPage.astro'), 'utf8'), /location\.replace\("\/AtlasOS\/tr\/404\/"\)/, 'Turkish deep-link 404 fallback is missing.');
+assert.ok(existsSync(join(root, 'images', 'atlas-logo-header.png')), 'Transparent header logo was not copied to the built site.');
+assert.ok(existsSync(join(root, 'images', 'product', 'atlasos-desktop-0.6.3-rc.webp')), 'Optimized genuine RC screenshot was not copied to the built site.');
+
+console.log(`Website checks passed: ${routes.length} English/Turkish routes, ${htmlFiles.length} HTML documents, local references, locale metadata, and authentic capture galleries.`);

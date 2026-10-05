@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://chavooosss.github.io/AtlasOS/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/features/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/education/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/screenshots/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/about/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/download/</loc></url>
-  <url><loc>https://chavooosss.github.io/AtlasOS/community/</loc></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://chavooosss.github.io/AtlasOS/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/features/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/features/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/features/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/features/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/features/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/features/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/education/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/education/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/education/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/education/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/education/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/education/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/screenshots/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/screenshots/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/screenshots/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/screenshots/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/screenshots/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/screenshots/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/about/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/about/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/about/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/about/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/about/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/about/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/download/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/download/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/download/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/download/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/download/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/download/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/community/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/community/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/community/"/></url>
+  <url><loc>https://chavooosss.github.io/AtlasOS/tr/community/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chavooosss.github.io/AtlasOS/community/"/><xhtml:link rel="alternate" hreflang="tr" href="https://chavooosss.github.io/AtlasOS/tr/community/"/></url>
 </urlset>

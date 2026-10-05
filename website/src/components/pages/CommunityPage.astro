@@ -1,0 +1,17 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import { copy, type Locale } from "../../data/i18n";
+import { site } from "../../data/site";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].community;
+const links = { repo: site.repo, issues: site.issues, roadmap: site.roadmap };
+---
+<SiteLayout title={t.title} description={t.description}>
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} compact={true} />
+  <section class="page-content"><div class="shell">
+    <div class="link-grid">{t.cards.map((card) => <a class="link-card" href={links[card.key]} target="_blank" rel="noreferrer"><div class="icon-tile" aria-hidden="true">↗</div><h3>{card.title}</h3><p>{card.text}</p></a>)}</div>
+    <div class="content-block" style="margin-top:60px"><span class="eyebrow">{t.helpful}</span><h2>{t.helpfulTitle}</h2><p>{t.helpfulText}</p></div>
+    <div class="cta-band"><div><h2>{t.ctaTitle}</h2><p>{t.ctaText}</p></div><a class="button button-light" href={site.repo} target="_blank" rel="noreferrer">{t.cta}</a></div>
+  </div></section>
+</SiteLayout>

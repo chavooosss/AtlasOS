@@ -1,21 +1,4 @@
 ---
-import SiteLayout from "../layouts/SiteLayout.astro";
+import NotFoundPage from "../components/pages/NotFoundPage.astro";
 ---
-
-<SiteLayout
-  title="Page not found"
-  description="The page you requested could not be found on AtlasOS."
-  dark={true}
->
-  <section class="not-found">
-    <div class="not-found-inner">
-      <div class="code" aria-hidden="true">404</div><h1>
-        This page wandered off.
-      </h1><p>
-        The page may have moved or the link may be out of date. Let’s get you
-        back to the AtlasOS home page.
-      </p><a class="button button-primary" href="/AtlasOS/"
-        >Go to home <span aria-hidden="true">→</span></a>
-    </div>
-  </section>
-</SiteLayout>
+<NotFoundPage locale="en" />

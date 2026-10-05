@@ -1,0 +1,16 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import { copy, type Locale } from "../../data/i18n";
+import { site } from "../../data/site";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].about;
+---
+<SiteLayout title={t.title} description={t.description} active="/about/">
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} />
+  <section class="page-content"><div class="shell">
+    <div class="content-block split"><div><span class="eyebrow">{t.goalEyebrow}</span><h2>{t.goalTitle}</h2><p>{t.goal1}</p><p>{t.goal2}</p><a class="button button-primary" href={site.repo} target="_blank" rel="noreferrer">{t.goalLink}</a></div><aside class="brand-note-card"><span class="eyebrow">{t.independent}</span><span class="brand-note-monogram" aria-hidden="true">A</span><p>{t.aside}</p></aside></div>
+    <div class="content-block"><span class="eyebrow">{t.stackEyebrow}</span><h2>{t.stackTitle}</h2><p>{t.stackText}</p><div class="stack-list">{t.stack.map((item) => <div class="stack-item">{item}</div>)}</div></div>
+    <div class="content-block split"><div><span class="eyebrow">{t.openEyebrow}</span><h2>{t.openTitle}</h2><p>{t.openText}</p></div><div class="benefit"><div class="icon-tile" aria-hidden="true">↗</div><h3>{t.benefitTitle}</h3><p>{t.benefitText}</p><a href={site.roadmap} class="text-link">{t.benefitLink}</a></div></div>
+  </div></section>
+</SiteLayout>

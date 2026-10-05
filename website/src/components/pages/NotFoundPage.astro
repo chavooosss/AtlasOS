@@ -1,0 +1,16 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { copy, type Locale } from "../../data/i18n";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].notFound;
+const home = locale === "tr" ? "/AtlasOS/tr/" : "/AtlasOS/";
+---
+<SiteLayout title={t.title} description={t.description} dark={true}>
+  <section class="not-found"><div class="not-found-inner"><div class="code" aria-hidden="true">404</div><h1>{t.heading}</h1><p>{t.text}</p><a class="button button-primary" href={home}>{t.home} <span aria-hidden="true">→</span></a></div></section>
+  <script is:inline>
+    const path = window.location.pathname.replace(/\/$/, "");
+    if (path.startsWith("/AtlasOS/tr/") && path !== "/AtlasOS/tr/404") {
+      window.location.replace("/AtlasOS/tr/404/");
+    }
+  </script>
+</SiteLayout>

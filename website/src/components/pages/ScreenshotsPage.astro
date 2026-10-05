@@ -1,0 +1,17 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PageHero from "../PageHero.astro";
+import ProductCapture from "../ProductCapture.astro";
+import { copy, type Locale } from "../../data/i18n";
+const { locale = "en" } = Astro.props as { locale?: Locale };
+const t = copy[locale].screenshots;
+---
+<SiteLayout title={t.title} description={t.description} active="/screenshots/">
+  <PageHero eyebrow={t.eyebrow} title={t.heroTitle} text={t.heroText} />
+  <section class="page-content"><div class="shell">
+    <div class="gallery gallery-authentic" aria-label={locale === "tr" ? "Gerçek AtlasOS ürün görüntüleri" : "Authentic AtlasOS product captures"}>
+      {t.captures.map((capture, index) => <ProductCapture src={capture.image} alt={capture.alt} title={capture.title} caption={capture.caption} kind={capture.kind} width={capture.width} height={capture.height} eager={index === 0} />)}
+    </div>
+    <p class="gallery-footnote">{t.footnote}</p>
+  </div></section>
+</SiteLayout>
