@@ -1,10 +1,10 @@
 # Privacy and publication inventory
 
-This is a pre-publication classification, not a claim that all content has completed visual, legal, or privacy clearance.
+This records the privacy boundaries used for the public source baseline. It does not claim that excluded historical or binary material has received privacy clearance.
 
 ## Curated public documentation candidates
 
-The current candidate set includes the project README, documentation index, roadmap/changelog/contribution/security guidance, architecture/build/testing records, project status and publication notes, third-party inventory, and curated validation records. These documents should be rescanned as part of any future exact publication review.
+The public source baseline contains the project README, documentation index, roadmap/changelog/contribution/security guidance, architecture/build/testing records, project status and publication notes, third-party inventory, and curated validation records. The source candidate passed the repository's public-document path and link checks before publication.
 
 ## Review before publishing
 
@@ -19,6 +19,6 @@ Raw project handoffs, prompts, memory/session exports, unreviewed field reports,
 
 ## Review status
 
-The prior publication audit found no confirmed secrets in its proposed source set, but that result was scoped to the audited candidate and exclusions. A fresh focused scan is required on the exact files proposed for any public repository or release. Third-party asset and package notice review remains incomplete.
+The G7/G8 source-candidate scan found no high-confidence secret patterns or workstation paths in public documents. Gitleaks was unavailable locally; the first GitHub Actions secret-scan result should be checked independently. Third-party package notices and source obligations remain a binary release gate.
 
-See the [publication manifest](publication-manifest.md), [third-party inventory](../legal/third-party-inventory.md), and [first-commit proposal](first-commit-manifest.md).
+See the [publication manifest](publication-manifest.md), [third-party inventory](../legal/third-party-inventory.md), and [first-commit manifest](first-commit-manifest.json).
