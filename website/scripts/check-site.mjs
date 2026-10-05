@@ -69,10 +69,13 @@ for (const screenshotPath of [join(root, 'screenshots', 'index.html'), join(root
 for (const route of ['', 'features', 'education', 'screenshots', 'about', 'download', 'community']) {
   const html = readFileSync(join(root, route, 'index.html'), 'utf8');
   assert.match(html, /hreflang="tr"[^>]+href="https:\/\/chavooosss\.github\.io\/AtlasOS\/tr/, `English route lacks a Turkish equivalent: /${route}/`);
+  assert.match(html, /© \d{4} AtlasOS contributors/, `English footer is missing: /${route}/`);
 }
 for (const route of ['tr', 'tr/features', 'tr/education', 'tr/screenshots', 'tr/about', 'tr/download', 'tr/community']) {
   const html = readFileSync(join(root, route, 'index.html'), 'utf8');
   assert.match(html, /hreflang="en"[^>]+href="https:\/\/chavooosss\.github\.io\/AtlasOS\/(?!tr\/)/, `Turkish route lacks an English equivalent: /${route}/`);
+  assert.match(html, /© \d{4} AtlasOS’a katkı sunanlar/, `Turkish footer is not localized: /${route}/`);
+  assert.doesNotMatch(html, /AtlasOS contributors/, `English footer text leaked into Turkish route: /${route}/`);
 }
 const sitemap = readFileSync(join(root, 'sitemap.xml'), 'utf8');
 for (const route of ['features', 'education', 'screenshots', 'about', 'download', 'community']) {
