@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chavooosss.github.io/AtlasOS/sitemap.xml

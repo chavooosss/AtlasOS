@@ -1,0 +1,128 @@
+---
+import { navigation, site } from "../data/site";
+import "../styles/global.css";
+const {
+  title = "A thoughtful Linux experience for the classroom",
+  description = "AtlasOS is an education-focused Ubuntu-based Live Linux project for classroom interactive boards.",
+  active = "",
+  dark = false,
+} = Astro.props;
+const path = Astro.url.pathname.replace("/AtlasOS", "") || "/";
+const pageTitle = title === "AtlasOS" ? title : `${title} — AtlasOS`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content={dark ? "#061a3d" : "#f6f9ff"} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta
+      property="og:url"
+      content={`https://chavooosss.github.io/AtlasOS${path}`}
+    />
+    <link rel="icon" type="image/svg+xml" href="/AtlasOS/favicon.svg" />
+    <link
+      rel="canonical"
+      href={`https://chavooosss.github.io/AtlasOS${path}`}
+    />
+    <title>{pageTitle}</title>
+  </head>
+  <body class:list={{ "theme-dark": dark }}>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner shell">
+        <a class="brand" href="/AtlasOS/" aria-label="AtlasOS home">
+          <img
+            src="/AtlasOS/images/atlas-logo.png"
+            alt="AtlasOS"
+            width="132"
+            height="49"
+          />
+        </a>
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="primary-nav"
+          aria-label="Open navigation menu"
+          ><span></span><span></span><span></span></button
+        >
+        <nav
+          id="primary-nav"
+          class="primary-nav"
+          aria-label="Primary navigation"
+        >
+          {
+            navigation.map((item) => (
+              <a
+                href={`/AtlasOS${item.href === "/" ? "/" : item.href}`}
+                class:list={{ active: active === item.href }}
+                aria-current={active === item.href ? "page" : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+          <a
+            class="nav-github"
+            href={site.repo}
+            target="_blank"
+            rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a
+          >
+        </nav>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer">
+      <div class="shell footer-main">
+        <div class="footer-brand">
+          <a class="brand" href="/AtlasOS/"
+            ><img
+              src="/AtlasOS/images/atlas-logo.png"
+              alt="AtlasOS"
+              width="132"
+              height="49"
+            /></a
+          ><p>
+            An independent open-source project exploring a better classroom
+            Linux experience.
+          </p>
+        </div>
+        <div class="footer-links">
+          <span class="eyebrow">Explore</span><a href="/AtlasOS/features/"
+            >Features</a
+          ><a href="/AtlasOS/education/">For Education</a><a
+            href="/AtlasOS/screenshots/">Screenshots</a>
+        </div>
+        <div class="footer-links">
+          <span class="eyebrow">Project</span><a
+            href={site.repo}
+            target="_blank"
+            rel="noreferrer">Source on GitHub ↗</a
+          ><a href={site.roadmap}>Roadmap</a><a href={site.security}>Security</a
+          ><a href={site.license}>MIT License</a>
+        </div>
+      </div>
+      <div class="shell footer-bottom">
+        <span>© {new Date().getFullYear()} AtlasOS contributors</span><span
+          >Independent project · Not affiliated with Ubuntu or any education
+          service</span>
+      </div>
+    </footer>
+    <script>
+      const toggle = document.querySelector(".menu-toggle");
+      const nav = document.querySelector("#primary-nav");
+      toggle?.addEventListener("click", () => {
+        const expanded = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!expanded));
+        nav?.classList.toggle("open", !expanded);
+      });
+    </script>
+  </body>
+</html>

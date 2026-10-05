@@ -1,0 +1,59 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import PageHero from "../components/PageHero.astro";
+import { site } from "../data/site";
+---
+
+<SiteLayout
+  title="Download"
+  active=""
+  description="AtlasOS source is available on GitHub. A public binary release is still being prepared."
+>
+  <PageHero
+    eyebrow="Try AtlasOS"
+    title="The source is open. The ISO is being prepared."
+    text="The AtlasOS source repository is public. The project does not currently offer an approved public ISO download; binary release remains on hold while release checks are completed."
+    image="/AtlasOS/images/atlas-landscape.png"
+    imageAlt="AtlasOS landscape artwork"
+    compact={true}
+  />
+  <section class="page-content">
+    <div class="shell">
+      <div class="status-card">
+        <div class="status-icon" aria-hidden="true">◷</div><div>
+          <span class="eyebrow">Binary release status</span><h2>
+            Public ISO release is in preparation.
+          </h2><p>
+            There is no approved ISO download yet. Historical validation images
+            are not public release assets. We will publish a downloadable image
+            through GitHub Releases after the current candidate completes its
+            release review.
+          </p><div class="status-actions">
+            <a
+              class="button button-primary"
+              href={site.repo}
+              target="_blank"
+              rel="noreferrer">View source on GitHub ↗</a
+            ><a
+              class="button"
+              style="background:#edf4ff;color:#163968"
+              href={site.releases}
+              target="_blank"
+              rel="noreferrer">Check release page ↗</a>
+          </div><p class="status-note">
+            The release page may not contain an AtlasOS binary today. Do not use
+            historical local test images as public downloads.
+          </p>
+        </div>
+      </div><div class="content-block" style="margin-top:56px">
+        <span class="eyebrow">When a release is ready</span><h2>
+          Clear files, clear verification.
+        </h2><p>
+          A future release will include a named ISO, SHA-256 checksum,
+          validation summary, and known limitations so you can verify what you
+          download and understand what has been tested.
+        </p>
+      </div>
+    </div>
+  </section>
+</SiteLayout>
