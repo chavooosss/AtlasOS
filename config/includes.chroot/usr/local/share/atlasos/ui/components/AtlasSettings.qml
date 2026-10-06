@@ -23,13 +23,13 @@ Rectangle {
     AtlasTheme { id: theme }
 
     readonly property var sections: [
-        { key: "home", label: "Genel" },
-        { key: "network", label: "Ağ ve internet" },
-        { key: "display", label: "Ekran" },
-        { key: "sound", label: "Ses" },
-        { key: "access", label: "Erişilebilirlik" },
-        { key: "about", label: "Hakkında" },
-        { key: "developer", label: "Geliştirici" }
+        { key: "home", label: "Genel", icon: "home" },
+        { key: "network", label: "Ağ ve internet", icon: "network" },
+        { key: "display", label: "Ekran", icon: "bulb" },
+        { key: "sound", label: "Ses", icon: "volume" },
+        { key: "access", label: "Erişilebilirlik", icon: "pen" },
+        { key: "about", label: "Hakkında", icon: "help" },
+        { key: "developer", label: "Geliştirici", icon: "settings" }
     ]
     property string selectedSection: atlasValidateSettingsSection || "home"
 
@@ -41,12 +41,12 @@ Rectangle {
             id: navigation
             width: panel.boardMode ? Math.max(240, Math.min(300, panel.width * 0.24)) : Math.max(218, Math.min(270, panel.width * 0.22))
             height: parent.height
-            color: theme.surfaceRaised
+            color: theme.shell
             Column {
                 anchors.fill: parent
                 anchors.margins: panel.boardMode ? 22 : 18
                 spacing: 10
-                Text { text: "SİSTEM"; color: theme.muted; font.pixelSize: 12; font.bold: true }
+                Text { text: "ATLAS AYARLARI"; color: theme.shellMutedText; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.1 }
                 Repeater {
                     model: panel.sections
                     delegate: Controls.Button {
@@ -60,18 +60,22 @@ Rectangle {
                         onClicked: panel.selectedSection = modelData.key
                         background: Rectangle {
                             radius: theme.radiusCard
-                            color: panel.selectedSection === modelData.key ? theme.softBlue : parent.hovered ? theme.surfaceRaised : "transparent"
-                            Rectangle { visible: panel.selectedSection === modelData.key; width: 3; radius: 2; color: theme.blue; anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom }
+                            color: panel.selectedSection === modelData.key ? theme.shellRaised : parent.hovered ? "#102f52" : "transparent"
+                            Rectangle { visible: panel.selectedSection === modelData.key; width: 4; radius: 2; color: "#57b7ff"; anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom }
                         }
-                        contentItem: Text { text: parent.text; color: theme.ink; font: parent.font; verticalAlignment: Text.AlignVCenter; leftPadding: 14; elide: Text.ElideRight }
+                        contentItem: Row {
+                            spacing: 12
+                            AtlasIcon { width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter; name: modelData.icon; strokeColor: panel.selectedSection === modelData.key ? theme.shellText : theme.shellMutedText }
+                            Text { width: parent.width - 40; text: parent.parent.text; color: theme.shellText; font: parent.parent.font; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
+                        }
                     }
                 }
                 Item { width: 1; height: Math.max(8, navigation.height - 520) }
-                Text { width: parent.width; text: "AtlasOS 0.6.3 · Live"; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: 12 }
+                Text { width: parent.width; text: "AtlasOS 0.6.3 · Live"; color: theme.shellMutedText; font.family: theme.fontFamily; font.pixelSize: 12 }
             }
         }
 
-        Rectangle { width: 1; height: parent.height; color: theme.line }
+        Rectangle { width: 1; height: parent.height; color: theme.shellLine }
 
         Flickable {
             id: detailsScroll

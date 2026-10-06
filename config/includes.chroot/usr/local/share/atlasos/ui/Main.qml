@@ -398,6 +398,8 @@ Window {
         boardMode: root.boardMode
         penState: root.systemStatus.pen
         onNetworkRequested: root.openTool("network")
+        onSettingsRequested: root.openTool("settings")
+        onPowerRequested: root.openTool("power")
         notificationCount: atlasAlerts.unread
         onNotificationsRequested: root.openTool("notifications")
     }

@@ -5,6 +5,7 @@ import "../theme"
 Controls.Slider {
     id: control
     property real controlScale: 1.0
+    property bool darkMode: false
     AtlasTheme { id: theme }
     implicitHeight: 42 * controlScale
     focusPolicy: Qt.StrongFocus
@@ -15,7 +16,7 @@ Controls.Slider {
         width: control.availableWidth
         height: 8 * control.controlScale
         radius: height / 2
-        color: theme.softBlue
+        color: control.darkMode ? theme.shellLine : theme.softBlue
         Rectangle {
             width: parent.width * control.visualPosition
             height: parent.height
@@ -29,7 +30,7 @@ Controls.Slider {
         width: (control.activeFocus || control.hovered ? 28 : 24) * control.controlScale
         height: width
         radius: width / 2
-        color: theme.surface
+        color: control.darkMode ? theme.shellText : theme.surface
         border.width: control.activeFocus ? 3 : 2
         border.color: control.activeFocus ? theme.focus : theme.blue
     }

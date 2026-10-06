@@ -67,23 +67,23 @@ Rectangle {
 
             Rectangle {
                 width: parent.width; height: panel.boardMode ? 104 : 92
-                radius: theme.radiusCard; color: theme.paleBlue; border.color: theme.line
+                radius: theme.radiusPanel; color: theme.navy
                 Row {
                     anchors.fill: parent; anchors.margins: 18; spacing: 18
                     Column {
                         width: (parent.width - 36) / 3; anchors.verticalCenter: parent.verticalCenter; spacing: 5
-                        Text { text: "Etkin arayüz"; color: theme.muted; font.pixelSize: 13 }
-                        Text { width: parent.width; text: atlasNetwork.active.device ? (atlasNetwork.active.type === "wifi" ? "Wi-Fi · " : "Ethernet · ") + atlasNetwork.active.device : atlasNetwork.active.state; color: theme.ink; font.pixelSize: 16; font.bold: true; elide: Text.ElideRight }
+                        Text { text: "ETKİN ARAYÜZ"; color: theme.shellMutedText; font.pixelSize: 12; font.bold: true; font.letterSpacing: 0.5 }
+                        Text { width: parent.width; text: atlasNetwork.active.device ? (atlasNetwork.active.type === "wifi" ? "Wi-Fi · " : "Ethernet · ") + atlasNetwork.active.device : atlasNetwork.active.state; color: theme.shellText; font.pixelSize: 16; font.bold: true; elide: Text.ElideRight }
                     }
                     Column {
                         width: (parent.width - 36) / 3; anchors.verticalCenter: parent.verticalCenter; spacing: 5
-                        Text { text: "Etkin IP adresi"; color: theme.muted; font.pixelSize: 13 }
-                        Text { width: parent.width; text: atlasNetwork.active.address || "Henüz alınmadı"; color: theme.ink; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight }
+                        Text { text: "ETKİN IP ADRESİ"; color: theme.shellMutedText; font.pixelSize: 12; font.bold: true; font.letterSpacing: 0.5 }
+                        Text { width: parent.width; text: atlasNetwork.active.address || "Henüz alınmadı"; color: theme.shellText; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight }
                     }
                     Column {
                         width: (parent.width - 36) / 3; anchors.verticalCenter: parent.verticalCenter; spacing: 5
-                        Text { text: "IP yapılandırması"; color: theme.muted; font.pixelSize: 13 }
-                        Text { width: parent.width; text: atlasNetwork.active.dhcp || "Bilinmiyor"; color: theme.ink; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight }
+                        Text { text: "IP YAPILANDIRMASI"; color: theme.shellMutedText; font.pixelSize: 12; font.bold: true; font.letterSpacing: 0.5 }
+                        Text { width: parent.width; text: atlasNetwork.active.dhcp || "Bilinmiyor"; color: theme.shellText; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight }
                     }
                 }
             }
@@ -124,9 +124,8 @@ Rectangle {
                         Row {
                             width: parent.width; spacing: 10
                             AtlasIcon { width: 26; height: 26; name: "network"; strokeColor: theme.blue }
-                            Text { text: "Wi-Fi"; color: theme.ink; font.pixelSize: 20; font.bold: true; verticalAlignment: Text.AlignVCenter }
-                            Item { width: Math.max(0, parent.width - 220); height: 1 }
-                            AtlasButton { width: panel.boardMode ? 164 : 146; text: atlasNetwork.wifiRadioAvailable ? (atlasNetwork.wifiEnabled ? "Wi-Fi'yi kapat" : "Wi-Fi'yi aç") : "Kullanılamıyor"; controlScale: 1; enabled: atlasNetwork.wifiRadioAvailable && !atlasNetwork.busy; onClicked: atlasNetwork.toggleWifi() }
+                            Text { width: parent.width - wifiToggle.width - 46; text: "Wi-Fi"; color: theme.ink; font.pixelSize: 20; font.bold: true; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
+                            AtlasButton { id: wifiToggle; width: panel.boardMode ? 164 : 146; text: atlasNetwork.wifiRadioAvailable ? (atlasNetwork.wifiEnabled ? "Wi-Fi'yi kapat" : "Wi-Fi'yi aç") : "Kullanılamıyor"; controlScale: 1; enabled: atlasNetwork.wifiRadioAvailable && !atlasNetwork.busy; onClicked: atlasNetwork.toggleWifi() }
                         }
                         Text {
                             width: parent.width

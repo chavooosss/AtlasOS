@@ -31,12 +31,13 @@ Rectangle {
         }
         Rectangle {
             visible: atlasAlerts.items.length === 0
-            width: parent.width; height: 130
-            radius: theme.radiusCard; color: theme.surface; border.color: theme.line
-            Text {
-                anchors.centerIn: parent
-                text: "Bu oturumda Atlas bildirimi yok."
-                color: theme.muted; font.pixelSize: 17
+            width: parent.width; height: 164
+            radius: theme.radiusPanel; color: theme.surfaceRaised
+            Column {
+                anchors.centerIn: parent; spacing: 10
+                AtlasIcon { anchors.horizontalCenter: parent.horizontalCenter; width: 34; height: 34; name: "bell"; strokeColor: theme.blue }
+                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Şimdilik her şey sakin"; color: theme.ink; font.pixelSize: 19; font.bold: true }
+                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Yeni sistem bildirimleri burada görünecek."; color: theme.muted; font.pixelSize: 14 }
             }
         }
         ListView {
@@ -50,7 +51,7 @@ Rectangle {
             delegate: Rectangle {
                 width: ListView.view.width - 12
                 height: panel.boardMode ? 104 : 92
-                radius: theme.radiusCard; color: theme.surface; border.color: theme.line
+                radius: theme.radiusCard; color: index % 2 === 0 ? theme.surface : theme.surfaceRaised; border.color: theme.line
                 Column {
                     anchors.left: parent.left; anchors.leftMargin: 20
                     anchors.right: timeText.left; anchors.rightMargin: 14
