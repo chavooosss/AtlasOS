@@ -1,29 +1,32 @@
 # Contributing to AtlasOS
 
-AtlasOS is a pre-publication development project. The repository is not yet public and external contributions are not currently open. This document records the lightweight expectations to use when contribution access is enabled.
+AtlasOS is a public development-preview project. Contributions are welcome through public GitHub issues and pull requests; changes are reviewed before merge. For a substantial product or architecture proposal, open an issue first to agree on the problem and scope.
 
-## Before a large change
+## Where to start
 
-For substantial architecture or product changes, open an issue or discussion first once a public project channel exists. Explain the user problem, proposed scope, affected components, and how the result can be validated. Small fixes may be submitted with a concise description and evidence.
+- Desktop and packaged runtime integration: `config/`
+- UEFI Atlas Boot Manager: `atlas-boot/`
+- ISO build and integration tools: `iso/`
+- Tests and validation helpers: `tests/`
+- Curated engineering and product documentation: `docs/`
 
-## Source layout
+Check [project status](docs/project/status.md), [architecture](docs/architecture/overview.md), and the [roadmap](ROADMAP.md) before taking on a larger change.
 
-- Atlas desktop and runtime integration: **config/**.
-- UEFI Atlas Boot Manager: **atlas-boot/**.
-- ISO build and integration tools: **iso/**.
-- Tests and validation helpers: **tests/**.
-- Curated engineering documentation: **docs/**.
+## Pull requests
 
-Generated ISO files, EFI binaries, VM images, test captures, extracted filesystems, logs, and diagnostics bundles should not be committed.
+Keep each PR focused. Explain the user problem, affected components, and how you checked the change. Match claims to evidence: distinguish source inspection, virtual checks, and owner-reported physical tests.
 
-## Change expectations
+- Python and shell changes: run the relevant focused tests or syntax checks.
+- Rust boot changes: include formatting, test/build evidence, and the firmware mode used.
+- UI changes: include a current screenshot or render comparison when practical; remove personal and device-identifying information.
+- Boot, kernel, initramfs, GRUB, Plymouth, or firmware changes: describe the boot path tested. Label QEMU evidence as virtual; physical claims need an artifact- and device-specific record.
+- Diagnostics and removable-media changes: preserve storage-safety and privacy boundaries.
+- Generated ISO files, EFI binaries, VM disks, extracted filesystems, build outputs, raw logs, and diagnostics bundles do not belong in Git history.
 
-- Keep claims aligned with the current implementation and evidence. Distinguish source inspection, virtual tests, and physical results.
-- For Python or shell changes, run the relevant focused unit or syntax checks where available.
-- For Rust boot-manager changes, include relevant formatting/build/test evidence and identify the firmware mode used.
-- UI changes should include a current screenshot or render comparison when it can be captured without personal information.
-- Boot, kernel, initramfs, GRUB, Plymouth, or firmware-path changes need explicit boot validation. QEMU evidence must be labeled virtual; physical claims require recorded hardware results.
-- Preserve storage-safety and privacy boundaries in diagnostics and removable-media code.
-- Review third-party licensing and asset provenance before adding redistributed material.
+## Licensing and assets
 
-The project-wide license is not yet selected. Do not assume that the Rust package license applies to the entire tree.
+The root [MIT license](LICENSE) covers AtlasOS-owned code within the scope described in [project license scope](docs/legal/project-license-scope.md). `atlas-boot` retains its own `MIT OR Apache-2.0` crate declaration. Third-party packages, fonts, icons, marks, and other assets keep their original terms. Include provenance and redistribution information for new assets; do not assume that a file’s presence means it is cleared for distribution.
+
+## Validation boundary
+
+The required CI checks cover source and policy checks, not a complete OS build or hardware matrix. Full ISO builds and physical validation remain separate release activities. See [CI and quality gates](docs/development/ci.md) and the [testing guide](docs/testing/README.md).

@@ -31,7 +31,7 @@ The Google repository/key setup has been removed from active build configuration
 
 - **Ubuntu Sans:** bundled font has the adjacent Ubuntu Font Licence 1.0 notice. Keep the notice wherever the font is redistributed; it is not under MIT.
 - **Adwaita/Papirus:** selected as Ubuntu packages, not known copied source assets. Use their installed package notices. Audit any future standalone copies.
-- **Atlas logo, boot art, wallpaper, dashboard imagery and startup sound:** origin/service terms are not fully documented. These remain excluded pending clearance or replacement.
+- **Atlas logo, boot art, and current UI/Plymouth artwork:** project-owner attested AI-generated and cleared for AtlasOS project distribution as recorded in the asset inventory; provider/model terms remain unknown and no exclusive-copyright claim is made. Startup audio remains excluded. See the [AI asset policy](ai-generated-assets.md).
 - **MEB/EBA/OGM/MEBİ:** current labels/URLs are textual compatibility references, not official integration or endorsement. Logos require independent clearance.
 - **Pardus image and environment photos/screenshots:** excluded absent image-specific rights/privacy review.
 - **Ubuntu/Canonical:** “Ubuntu-based” is a factual base description; no Canonical endorsement is claimed. The exact physical ISO has not had a complete visual mark audit.

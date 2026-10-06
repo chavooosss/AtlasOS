@@ -1,6 +1,6 @@
 {
   "schema": "atlasos-asset-inventory-v1",
-  "review_date": "2026-10-05",
+  "review_date": "2026-10-06",
   "purpose": "Publication gate; paths are repository-relative. A status does not grant rights.",
   "assets": [
     {
@@ -509,6 +509,90 @@
       "provider_terms_status": "NOT VERIFIED",
       "third_party_content_status": "THIRD-PARTY EDUCATION SERVICE NAMES/BRANDING REFERENCES PRESENT",
       "publication_status": "EXCLUDED; no redistribution clearance for embedded third-party references"
+    },
+    {
+      "path": "docs/media/atlasos-desktop.png",
+      "type": "AtlasOS product screenshot",
+      "origin": "Direct offscreen render of current AtlasOS QML desktop using the project PySide6/QML smoke renderer; 1920x1080",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Current UI implementation capture; backend/test state is local smoke-render state. Textual EBA, OGM Material, and MEBİ shortcuts may be visible; no official integration or endorsement is implied.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Limited visual review: textual service names may be present in UI; no separate third-party logo asset was added; not a legal guarantee",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
+    },
+    {
+      "path": "docs/media/quick-settings.png",
+      "type": "AtlasOS product screenshot",
+      "origin": "Direct offscreen render of current AtlasOS QML Quick Settings using the project PySide6/QML smoke renderer; 1920x1080",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Current UI implementation capture; not a full OS/VM capture. Background may contain textual local resource shortcuts only.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Limited visual review: textual service names may be present in UI; no separate third-party logo asset was added; not a legal guarantee",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
+    },
+    {
+      "path": "docs/media/network.png",
+      "type": "AtlasOS product screenshot",
+      "origin": "Direct offscreen render of current AtlasOS QML network settings using the project PySide6/QML smoke renderer; 1920x1080",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Current UI implementation capture; local service/test state may be shown. No personal filesystem path or host hardware detail.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Limited visual review: textual service names may be present in UI; no separate third-party logo asset was added; not a legal guarantee",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
+    },
+    {
+      "path": "docs/media/settings.png",
+      "type": "AtlasOS product screenshot",
+      "origin": "Direct offscreen render of current AtlasOS QML Settings home using the project PySide6/QML smoke renderer; 1920x1080",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Current UI implementation capture; local service/test state may be shown. No personal filesystem path or host hardware detail.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Limited visual review: textual service names may be present in UI; no separate third-party logo asset was added; not a legal guarantee",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
+    },
+    {
+      "path": "docs/media/power-menu.png",
+      "type": "AtlasOS product screenshot",
+      "origin": "Direct offscreen render of current AtlasOS QML power menu using the project PySide6/QML smoke renderer; 1920x1080",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Current UI implementation capture; not a full OS/VM capture. Background may contain textual local resource shortcuts only.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Limited visual review: textual service names may be present in UI; no separate third-party logo asset was added; not a legal guarantee",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
+    },
+    {
+      "path": "docs/media/atlas-boot-manager.png",
+      "type": "Atlas Boot Manager product screenshot",
+      "origin": "Unmodified copy of the existing Atlas Boot Manager project visual from website/public/images/atlasos-boot-manager.png",
+      "owner_status": "CLEARED",
+      "license": "Project documentation capture; visible third-party names/marks remain with their respective owners",
+      "redistribution_status": "CLEARED",
+      "notes": "Existing project image reused for documentation; not a physical-device capture or a new visual asset.",
+      "creation_method": "DIRECT-IMPLEMENTATION-CAPTURE",
+      "provider": "Not applicable",
+      "provider_terms_status": "Not applicable",
+      "third_party_content_status": "Textual service names may appear in product UI; no copied service-logo asset is included in this selected gallery",
+      "publication_status": "Cleared for AtlasOS public documentation as an implementation capture; does not claim rights over referenced third-party marks"
     }
   ]
 }
