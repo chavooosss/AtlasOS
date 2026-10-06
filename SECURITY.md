@@ -1,6 +1,6 @@
 # Security policy
 
-AtlasOS 0.6.3 is a Development Preview / Release Candidate. It is not presented as a production or universally supported system. Security review and supported-version policy are limited while the project is pre-publication. One owner-reported UEFI Live test passed on a Casper Excalibur G870; this is not broad hardware validation.
+AtlasOS 0.6.3 is a Development Preview / Release Candidate. It is not presented as a production or universally supported system. Security review and supported-version policy remain limited for this development preview. One owner-reported UEFI Live test passed on a Casper Excalibur G870; this is not broad hardware validation.
 
 ## Reporting a vulnerability
 

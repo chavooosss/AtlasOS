@@ -1,29 +1,33 @@
 # AtlasOS documentation
 
-This index describes current, curated project documentation. Historical notes, raw handoffs, prompt exports, local captures, and private diagnostics are not current public instructions.
+Start with the product overview and current status, then choose the engineering detail you need. Validation claims stay bounded to the device, configuration, and evidence recorded in each document.
 
-## Start here
+## Product and current status
 
-- [Project status](project/status.md) — maturity and evidence boundaries for current components.
-- [Architecture overview](architecture/overview.md) — boot, session, system integration, diagnostics, and build layers.
-- [Canonical source map](architecture/source-map.md) — source-to-generated-output relationships.
+- [Project status](project/status.md) — current maturity, capabilities, and evidence limits.
+- [Product screenshots](media/README.md) — provenance and scope for public UI captures.
+- [Publication record](project/publication-record.md) — public source-repository baseline and binary status.
+- [Roadmap](../ROADMAP.md) and [changelog](../CHANGELOG.md).
+
+## Build and development
+
+- [Architecture overview](architecture/overview.md) and [canonical source map](architecture/source-map.md).
 - [Build guide](build/README.md) — dependencies, build flow, and host-safety limitations.
-- [Testing layers](testing/README.md) — available validation methods and what they do not prove.
+- [Testing layers](testing/README.md) and [CI quality gates](development/ci.md).
+- [Contribution guidance](../CONTRIBUTING.md) and [security reporting](../SECURITY.md).
 
-## Evidence and review
+## Validation and release
 
-- [Physical 0.6.2 validation](validation/physical-0.6.2.md) — user-reported device test and artifact identity.
-- [Release integrity](validation/release-integrity.md) — embedded manifest caveat for the integrated ISO.
-- [Third-party code and asset inventory](legal/third-party-inventory.md) — preliminary license and provenance review.
-- [Publication manifest](project/publication-manifest.md) — proposed publication boundaries.
-- [Privacy inventory](project/privacy-inventory.md) — asset and information review status.
-- [History and roadmap notes](project/history-roadmap.md) — candidates for later evidence-based case studies.
+- [0.6.3 RC physical validation](validation/physical-0.6.3-rc1.md) — owner-reported, one-device result.
+- [Historical 0.6.2 physical validation](validation/physical-0.6.2.md).
+- [Release integrity](validation/release-integrity.md) — embedded-manifest caveat for the integrated historical ISO.
+- [Release and download status](release/README.md).
 
-## Repository guidance
+## Rights and publication boundaries
 
-- [Roadmap](../ROADMAP.md)
-- [Changelog](../CHANGELOG.md)
-- [Contribution guidance](../CONTRIBUTING.md)
-- [Security reporting guidance](../SECURITY.md)
+- [Project license scope](legal/project-license-scope.md).
+- [Third-party code and asset inventory](legal/third-party-inventory.md) — preliminary package/source review, not an exact-image legal determination.
+- [Publication scope](project/publication-manifest.md).
+- [Privacy inventory](project/privacy-inventory.md).
 
-The roadmap is directional. Validation statements remain limited to the device, configuration, and evidence named in their records.
+Historical handoffs, raw prompts, private photos, local captures, and diagnostic bundles are not public instructions or product evidence unless a curated record explicitly says otherwise.

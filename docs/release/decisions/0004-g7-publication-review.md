@@ -2,6 +2,8 @@
 
 **Recorded:** 2026-10-05
 
+**Historical outcome:** The public source repository was subsequently published on 2026-10-05; see [publication record](../../project/publication-record.md). The source-publication step is complete. The 0.6.3 binary hold remains current.
+
 ## Decision
 
 - **Source repository:** GO for the G8 source-publication step, subject to the project owner's final authorization to create and publish the repository.

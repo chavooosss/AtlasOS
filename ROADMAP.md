@@ -1,32 +1,32 @@
 # AtlasOS roadmap
 
-This is a directional plan, not a schedule or commitment. Items below are planned or under investigation unless the current status documentation marks them implemented.
+This roadmap describes product and engineering directions, not commitments or dates. Work is selected based on user needs and evidence from implementation and testing.
 
 ## Current focus
 
-- Establish clear public documentation and publication boundaries.
-- Improve build isolation and clean-build reproducibility.
-- Refine the Atlas desktop and validate existing workflows without weakening the 0.6.2 evidence boundaries.
+- Refine the classroom-facing desktop and system controls while keeping the AtlasOS visual identity consistent.
+- Improve usability at interactive-board resolutions, touch targets, keyboard access, and accessibility.
+- Make network status and recovery actions clearer across wired and wireless devices.
+- Keep build and validation instructions reproducible and honest about host requirements.
 
 ## Near-term engineering
 
-- Replace legacy host-level build workarounds with project-local or disposable build-environment mechanisms.
-- Regenerate and verify embedded integrity manifests after ISO integration.
-- Expand validation records for UI behavior, boot failure handling, audio/network, touch input, and supported physical devices.
+- Expand documented checks for UI behavior, scaling, input, network, audio, and removable media.
+- Build a broader device test matrix with model-specific evidence before making compatibility claims.
+- Improve diagnostics and operational guidance for teachers and school technical staff.
+- Continue reducing build-environment workarounds and recording the provenance of generated artifacts.
 
-## Future product milestones
+## Future product directions
 
-- **Installer:** explore a safe installation flow for AtlasOS.
-- **First boot and classroom provisioning:** investigate device setup, optional grade/class profiles, and classroom-specific preferences.
-- **Offline content preparation:** evaluate permitted, maintainable ways to make selected educational resources available offline.
-
-These are future directions; they are not implemented capabilities. Any external-service workflow depends on official, technically supported, and legally permitted interfaces. No scraping or automated content download is claimed.
+- Explore an installer and safe first-boot setup.
+- Investigate classroom profiles and device provisioning.
+- Evaluate maintainable offline educational-resource workflows.
+- Study accessibility and teacher workflows with documented methods and participants.
 
 ## Longer-term research
 
 - School device administration and policy management.
-- Broader interactive-board and laptop compatibility testing.
-- Accessibility and teacher workflow evaluation with documented participants and methods.
-- Official educational-service integration if suitable interfaces and permissions exist.
+- Broader interactive-board and laptop compatibility.
+- Educational-service integration only where official interfaces and permission exist.
 
-No dates are assigned. Progress should be reported with implementation status and reproducible evidence.
+No installer, centralized administration, broad hardware qualification, or official MEB/EBA/OGM/MEBİ integration is currently claimed. See [project status](docs/project/status.md) for implemented capabilities and validation scope.

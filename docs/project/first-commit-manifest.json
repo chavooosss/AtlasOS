@@ -1,6 +1,6 @@
 {
   "schema": "atlasos-pre-git-manifest-v1",
-  "status": "proposal-not-approved",
+  "status": "historical-plan-completed",
   "canonical_root": "repository-root",
   "project_version": "0.6.3",
   "sets": {
@@ -115,9 +115,16 @@
     "project_license_selected": true,
     "project_license": "MIT",
     "third_party_asset_review_complete": false,
-    "source_publication": "ready for G8 source-publication step subject to final owner authorization; root MIT applies to AtlasOS-owned source only; project-owner distribution permission is recorded for included AI-generated visual assets, provider/model terms remain unknown, no exclusive copyright is claimed",
+    "source_publication": "Public source repository published 2026-10-05; this pre-Git manifest remains a historical scope record. See docs/project/publication-record.md. Root MIT applies to AtlasOS-owned source only; owner-recorded AI visual project-distribution permission is separate, provider/model terms remain unknown, and no exclusive copyright is claimed.",
     "binary_publication": "hold for 0.6.3 RC pending exact-image package copyright/notice inventory, archive component attribution, and applicable corresponding-source review; historical 0.6.2 remains non-public",
     "git_initialized": false
   },
-  "lfs": "not-needed-for-current-proposed-assets; ISO release artifacts remain outside Git"
+  "lfs": "not-needed-for-current-proposed-assets; ISO release artifacts remain outside Git",
+  "snapshot_note": "Historical pre-Git publication plan. Its initial source scope and estimate are retained as a record; current repository state is public and documented in publication-record.md. Later product screenshots are documented separately under docs/media/.",
+  "current_publication": {
+    "source_repository": "PUBLIC",
+    "publication_record": "docs/project/publication-record.md",
+    "binary_download": "NOT PUBLISHED",
+    "binary_status": "0.6.3 RC remains on package-notice and source-obligation hold"
+  }
 }
