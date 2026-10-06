@@ -184,105 +184,28 @@ Rectangle {
     Popup {
         id: audioPopup
         objectName: "atlasAudioPopup"
-        x: Math.max(8, Math.min(header.width - width - 12, audioStatus.mapToItem(header, 0, 0).x + audioStatus.width / 2 - width / 2))
+        x: Math.max(12, header.width - width - 22)
         y: header.height + 8
-        width: Math.min(header.boardMode ? 440 : 400, header.width - 24)
-        padding: header.boardMode ? 22 : 20
+        width: Math.min(header.width - 24, header.width < 1450 ? 506 : 594)
+        padding: header.width < 1450 ? 20 : 24
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        background: Rectangle { color: theme.shell; radius: theme.radiusPanel; border.color: theme.shellLine; border.width: 1 }
-        contentItem: Column {
-            spacing: 15
-            Text { text: "Hızlı Ayarlar"; color: theme.shellText; font.family: theme.fontFamily; font.pixelSize: 22; font.bold: true }
-            Text { text: "Sınıf araçları ve sistem durumu"; color: theme.shellMutedText; font.family: theme.fontFamily; font.pixelSize: 14; wrapMode: Text.WordWrap; width: parent.width }
-            Row {
-                width: parent.width
-                spacing: 12
-                Repeater {
-                    model: 2
-                    delegate: Rectangle {
-                        required property int index
-                        width: (parent.width - parent.spacing) / 2
-                        height: header.boardMode ? 98 : 86
-                        radius: theme.radiusCard
-                        color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.blue : theme.shellRaised
-                        border.color: theme.shellLine
-                        AtlasIcon { x: 14; y: 14; width: 24; height: 24; name: index === 0 ? "network" : "network"; strokeColor: theme.shellText }
-                        Text {
-                            x: 14; y: 42; width: parent.width - 28
-                            text: index === 0 ? "Wi-Fi" : "Ethernet"
-                            color: theme.shellText
-                            font.family: theme.fontFamily; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight
-                        }
-                        Text {
-                            x: 14; y: 63; width: parent.width - 28
-                            text: index === 0 ? (!header.networkController || !header.networkController.wifiRadioAvailable ? "Denetleyici bulunamadı" : header.networkController.wifiEnabled ? "Açık" : "Kapalı") : (header.networkState || "Durum bilinmiyor")
-                            color: theme.shellMutedText
-                            font.family: theme.fontFamily; font.pixelSize: 12; elide: Text.ElideRight
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            enabled: index === 0 ? (header.networkController && header.networkController.wifiRadioAvailable) : true
-                            onClicked: index === 0 ? header.networkController.toggleWifi() : header.networkRequested()
-                        }
-                    }
-                }
-            }
-            AtlasButton { objectName: "atlasQuickNetworkButton"; width: parent.width; text: "Ağları ve bağlantı ayrıntılarını yönet"; iconName: "network"; variant: "darkSecondary"; controlScale: header.boardMode ? 1.1 : 1.0; onClicked: { audioPopup.close(); header.networkRequested() } }
-            Rectangle { width: parent.width; height: 1; color: theme.shellLine }
-            Text { text: "Ses"; color: theme.shellText; font.family: theme.fontFamily; font.pixelSize: 18; font.bold: true }
-            Row {
-                width: parent.width
-                spacing: 12
-                AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 23; height: 23; name: !header.audioController || header.audioController.muted ? "volume-muted" : header.audioController.volume < 35 ? "volume-low" : "volume"; strokeColor: theme.shellText }
-                AtlasSlider {
-                    id: volumeSlider
-                    darkMode: true
-                    width: parent.width - 72
-                    from: 0; to: 100; stepSize: 1
-                    value: header.audioController && header.audioController.available ? header.audioController.volume : 0
-                    enabled: header.audioController && header.audioController.available
-                    onMoved: if (header.audioController) header.audioController.setVolume(Math.round(value))
-                }
-                Text { width: 36; anchors.verticalCenter: parent.verticalCenter; text: Math.round(volumeSlider.value) + "%"; color: theme.shellText; font.pixelSize: 14; horizontalAlignment: Text.AlignRight }
-            }
-            AtlasButton {
-                width: parent.width
-                controlScale: header.boardMode ? 1.1 : 1
-                text: header.audioController && header.audioController.muted ? "Sesi Aç" : "Sessize Al"
-                iconName: header.audioController && header.audioController.muted ? "volume" : "volume-muted"
-                enabled: header.audioController && header.audioController.available
-                variant: "darkSecondary"
-                onClicked: header.audioController.toggleMute()
-            }
-            Rectangle { width: parent.width; height: 1; color: theme.shellLine }
-            Row {
-                width: parent.width; spacing: 12
-                AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 23; height: 23; name: "bulb"; strokeColor: theme.shellMutedText }
-                Column {
-                    width: parent.width - 42; spacing: 4
-                    Text { text: "Ekran parlaklığı"; color: theme.shellText; font.family: theme.fontFamily; font.pixelSize: 16; font.bold: true }
-                    Text { width: parent.width; text: "Bu ekran için Atlas üzerinden parlaklık denetimi kullanılamıyor."; color: theme.shellMutedText; font.family: theme.fontFamily; font.pixelSize: 13; wrapMode: Text.WordWrap }
-                }
-            }
-            Text {
-                visible: !header.audioController || !header.audioController.available
-                width: parent.width
-                text: "Ses aygıtı şu anda kullanılamıyor."
-                color: theme.shellMutedText
-                font.pixelSize: 13
-                wrapMode: Text.WordWrap
-            }
-            Row {
-                width: parent.width; spacing: 10
-                AtlasButton { width: (parent.width - parent.spacing) / 2; text: "Ayarlar"; iconName: "settings"; variant: "darkSecondary"; controlScale: header.boardMode ? 1.08 : 1; onClicked: { audioPopup.close(); header.settingsRequested() } }
-                AtlasButton { width: (parent.width - parent.spacing) / 2; text: "Güç"; iconName: "power"; variant: "darkSecondary"; controlScale: header.boardMode ? 1.08 : 1; onClicked: { audioPopup.close(); header.powerRequested() } }
-            }
+        background: Rectangle {
+            color: theme.surface
+            radius: theme.radiusPanel
+            border.color: theme.borderSubtle
+            border.width: 1
         }
-        Connections {
-            target: header.audioController
-            function onChanged() { if (!volumeSlider.pressed && header.audioController.available) volumeSlider.value = header.audioController.volume }
+        contentItem: AtlasQuickSettings {
+            width: audioPopup.width - audioPopup.leftPadding - audioPopup.rightPadding
+            compact: header.width < 1450
+            audioController: header.audioController
+            networkController: header.networkController
+            networkState: header.networkState
+            onNetworkRequested: { audioPopup.close(); header.networkRequested() }
+            onSettingsRequested: { audioPopup.close(); header.settingsRequested() }
+            onPowerRequested: { audioPopup.close(); header.powerRequested() }
         }
     }
 }

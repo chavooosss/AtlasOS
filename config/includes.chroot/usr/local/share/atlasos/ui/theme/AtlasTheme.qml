@@ -25,6 +25,27 @@ QtObject {
     readonly property color disabledSurface: "#edf2f7"
     readonly property color disabledInk: "#8a9bb0"
     readonly property color focus: "#236fcb"
+    // Reference-driven system surfaces share these semantic names.
+    readonly property color atlasNavy: navy
+    readonly property color atlasNavyDeep: deepNavy
+    readonly property color atlasBlue: "#116cf1"
+    readonly property color atlasBlueHover: "#075bd6"
+    readonly property color atlasBlueSoft: "#dcecff"
+    readonly property color surfaceMuted: "#edf4fb"
+    readonly property color textPrimary: ink
+    readonly property color textSecondary: muted
+    readonly property color textMuted: "#8395ad"
+    readonly property color borderSubtle: line
+    readonly property color success: green
+    readonly property color warning: amber
+    readonly property color danger: red
+    readonly property real radiusMedium: 12
+    readonly property real radiusLarge: 18
+    readonly property real spacingXs: space2
+    readonly property real spacingSm: space3
+    readonly property real spacingMd: space4
+    readonly property real spacingLg: space5
+    readonly property real spacingXl: space6
     readonly property real space1: 4
     readonly property real space2: 8
     readonly property real space3: 12
