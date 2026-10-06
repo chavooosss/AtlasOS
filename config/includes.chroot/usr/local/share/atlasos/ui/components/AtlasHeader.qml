@@ -9,6 +9,7 @@ Rectangle {
     property string audioState: "Bilinmiyor"
     property string penState: "Algılanmadı"
     property var audioController: null
+    property var networkController: null
     property bool boardMode: false
     property int notificationCount: 0
     property date currentTime: new Date()
@@ -82,7 +83,11 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
-                onClicked: header.networkRequested()
+                onClicked: {
+                    if (header.networkController) header.networkController.refresh()
+                    if (header.audioController) header.audioController.refresh()
+                    audioPopup.open()
+                }
                 ToolTip.visible: containsMouse
                 ToolTip.text: "Ağ tanılama ve bağlantıları aç"
             }
@@ -92,6 +97,7 @@ Rectangle {
 
         Item {
             id: audioStatus
+            objectName: "atlasAudioStatus"
             width: header.compact ? 78 : 90
             height: header.height - 6
             Row {
@@ -112,7 +118,11 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
-                onClicked: { if (header.audioController) header.audioController.refresh(); audioPopup.open() }
+                onClicked: {
+                    if (header.networkController) header.networkController.refresh()
+                    if (header.audioController) header.audioController.refresh()
+                    audioPopup.open()
+                }
                 ToolTip.visible: containsMouse
                 ToolTip.text: "Ses düzeyini ayarla"
             }
@@ -174,15 +184,51 @@ Rectangle {
         objectName: "atlasAudioPopup"
         x: Math.max(8, Math.min(header.width - width - 12, audioStatus.mapToItem(header, 0, 0).x + audioStatus.width / 2 - width / 2))
         y: header.height + 8
-        width: header.boardMode ? 370 : 330
-        padding: header.boardMode ? 22 : 18
+        width: Math.min(header.boardMode ? 440 : 400, header.width - 24)
+        padding: header.boardMode ? 22 : 20
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Rectangle { color: theme.surface; radius: theme.radiusPanel; border.color: theme.line; border.width: 1 }
         contentItem: Column {
-            spacing: 14
-            Text { text: "Ses düzeyi"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 19; font.bold: true }
+            spacing: 15
+            Text { text: "Hızlı Ayarlar"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 22; font.bold: true }
+            Text { text: "Ağ, ses ve ekran durumuna hızlı erişim"; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: 14; wrapMode: Text.WordWrap; width: parent.width }
+            Row {
+                width: parent.width
+                spacing: 12
+                Repeater {
+                    model: 2
+                    delegate: Rectangle {
+                        required property int index
+                        width: (parent.width - parent.spacing) / 2
+                        height: header.boardMode ? 98 : 86
+                        radius: theme.radiusCard
+                        color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.navy : theme.paleBlue
+                        border.color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.navy : theme.line
+                        AtlasIcon { x: 14; y: 14; width: 24; height: 24; name: index === 0 ? "network" : "settings"; strokeColor: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.surface : theme.blue }
+                        Text {
+                            x: 14; y: 42; width: parent.width - 28
+                            text: index === 0 ? "Wi-Fi" : "Ethernet"
+                            color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.surface : theme.ink
+                            font.family: theme.fontFamily; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight
+                        }
+                        Text {
+                            x: 14; y: 63; width: parent.width - 28
+                            text: index === 0 ? (!header.networkController || !header.networkController.wifiRadioAvailable ? "Durum bilinmiyor" : header.networkController.wifiEnabled ? "Açık" : "Kapalı") : (header.networkState || "Durum bilinmiyor")
+                            color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.softBlue : theme.muted
+                            font.family: theme.fontFamily; font.pixelSize: 12; elide: Text.ElideRight
+                        }
+                        MouseArea {
+                            anchors.fill: parent; enabled: index === 0 && header.networkController && header.networkController.wifiRadioAvailable
+                            onClicked: header.networkController.toggleWifi()
+                        }
+                    }
+                }
+            }
+            AtlasButton { objectName: "atlasQuickNetworkButton"; width: parent.width; text: "Ağları ve bağlantı ayrıntılarını yönet"; iconName: "network"; variant: "secondary"; controlScale: header.boardMode ? 1.1 : 1.0; onClicked: { audioPopup.close(); header.networkRequested() } }
+            Rectangle { width: parent.width; height: 1; color: theme.line }
+            Text { text: "Ses"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 18; font.bold: true }
             Row {
                 width: parent.width
                 spacing: 12
@@ -205,6 +251,16 @@ Rectangle {
                 enabled: header.audioController && header.audioController.available
                 variant: "secondary"
                 onClicked: header.audioController.toggleMute()
+            }
+            Rectangle { width: parent.width; height: 1; color: theme.line }
+            Row {
+                width: parent.width; spacing: 12
+                AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 23; height: 23; name: "bulb"; strokeColor: theme.muted }
+                Column {
+                    width: parent.width - 42; spacing: 4
+                    Text { text: "Ekran parlaklığı"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 16; font.bold: true }
+                    Text { width: parent.width; text: "Bu ekran için Atlas üzerinden parlaklık denetimi kullanılamıyor."; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: 13; wrapMode: Text.WordWrap }
+                }
             }
             Text {
                 visible: !header.audioController || !header.audioController.available

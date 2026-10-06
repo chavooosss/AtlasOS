@@ -41,7 +41,7 @@ Rectangle {
             id: navigation
             width: panel.boardMode ? Math.max(240, Math.min(300, panel.width * 0.24)) : Math.max(218, Math.min(270, panel.width * 0.22))
             height: parent.height
-            color: "#edf3fa"
+            color: theme.surfaceRaised
             Column {
                 anchors.fill: parent
                 anchors.margins: panel.boardMode ? 22 : 18
@@ -52,14 +52,14 @@ Rectangle {
                     delegate: Controls.Button {
                         required property var modelData
                         width: parent.width
-                        height: panel.boardMode ? 72 : 58
+                        height: panel.boardMode ? theme.touchBoard : theme.touch
                         text: modelData.label
                         font.family: theme.fontFamily
                         font.pixelSize: panel.boardMode ? 17 : 15
                         font.weight: panel.selectedSection === modelData.key ? Font.DemiBold : Font.Normal
                         onClicked: panel.selectedSection = modelData.key
                         background: Rectangle {
-                            radius: theme.radiusSmall
+                            radius: theme.radiusCard
                             color: panel.selectedSection === modelData.key ? theme.softBlue : parent.hovered ? theme.surfaceRaised : "transparent"
                             Rectangle { visible: panel.selectedSection === modelData.key; width: 3; radius: 2; color: theme.blue; anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom }
                         }
@@ -83,9 +83,9 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
             Column {
                 id: details
-                x: 30; y: 24
+                x: panel.boardMode ? 34 : 30; y: panel.boardMode ? 28 : 24
                 width: detailsScroll.width - 60
-                spacing: 18
+                spacing: panel.boardMode ? 22 : 18
 
                 Column {
                     width: parent.width
@@ -133,7 +133,7 @@ Rectangle {
                         }
                     }
                     Rectangle {
-                        width: parent.width; height: 78; radius: 12; color: "#e5f1fc"
+                        width: parent.width; height: 84; radius: theme.radiusCard; color: theme.paleBlue
                         Row { anchors.fill: parent; anchors.margins: 18; spacing: 14; Text { text: "⚙"; color: theme.blue; font.pixelSize: 26; anchors.verticalCenter: parent.verticalCenter } Column { anchors.verticalCenter: parent.verticalCenter; spacing: 4; Text { text: "Atlas sistem araçları"; color: theme.ink; font.pixelSize: 16; font.bold: true } Text { text: "CPU ve bellek kullanımını görüntüle"; color: theme.muted; font.pixelSize: 14 } } }
                         MouseArea { anchors.fill: parent; onClicked: panel.appRequested("resources") }
                     }
@@ -143,7 +143,7 @@ Rectangle {
                     visible: panel.selectedSection === "network"
                     width: parent.width; spacing: 12
                     Rectangle {
-                        width: parent.width; height: 138; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 138; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 8; Text { text: "Bağlantı durumu"; color: theme.ink; font.pixelSize: 18; font.bold: true } Text { width: parent.width; text: panel.networkState; color: theme.muted; font.pixelSize: 15; wrapMode: Text.WordWrap } Text { text: "Kablolu ağ ve Wi‑Fi tanılamasını aç"; color: theme.blue; font.pixelSize: 14 } }
                         MouseArea { anchors.fill: parent; onClicked: panel.networkRequested() }
                     }
@@ -154,11 +154,11 @@ Rectangle {
                     visible: panel.selectedSection === "display"
                     width: parent.width; spacing: 12
                     Rectangle {
-                        width: parent.width; height: 140; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 140; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 8; Text { text: "Görüntü bilgisi"; color: theme.ink; font.pixelSize: 18; font.bold: true } Text { text: Screen.width + " × " + Screen.height + " mantıksal piksel"; color: theme.ink; font.pixelSize: 16 } Text { text: "Atlas arayüzü bağlı ekran boyutuna uyum sağlar. Ekran çözünürlüğü cihazın görüntü aygıtı tarafından belirlenir."; width: parent.width; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap } }
                     }
                     Rectangle {
-                        width: parent.width; height: 126; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 126; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Row {
                             anchors.fill: parent; anchors.margins: 18; spacing: 16
                             Column {
@@ -180,13 +180,26 @@ Rectangle {
                         width: parent.width; height: panel.boardMode ? 108 : 92; radius: theme.radiusCard; color: theme.paleBlue
                         Column { anchors.fill: parent; anchors.margins: 18; spacing: 5; Text { text: "Dokunma hedefleri"; color: theme.ink; font.pixelSize: 16; font.bold: true } Text { text: "Ana etkileşim alanları en az 64 mantıksal piksel hedeflenerek hazırlanır."; width: parent.width; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap } }
                     }
+                    Rectangle {
+                        width: parent.width; height: 92; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
+                        Row {
+                            anchors.fill: parent; anchors.margins: 18; spacing: 14
+                            AtlasIcon { width: 26; height: 26; name: "bulb"; strokeColor: theme.muted; anchors.verticalCenter: parent.verticalCenter }
+                            Column {
+                                width: parent.width - 40
+                                anchors.verticalCenter: parent.verticalCenter; spacing: 5
+                                Text { text: "Parlaklık denetimi"; color: theme.ink; font.pixelSize: 16; font.bold: true }
+                                Text { width: parent.width; text: "Bu ekranda Atlas üzerinden donanım parlaklığı ayarlanamıyor."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap }
+                            }
+                        }
+                    }
                 }
 
                 Column {
                     visible: panel.selectedSection === "sound"
                     width: parent.width; spacing: 12
                     Rectangle {
-                        width: parent.width; height: 116; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 116; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Row {
                             anchors.fill: parent; anchors.margins: 20; spacing: 16
                             Column {
@@ -199,7 +212,7 @@ Rectangle {
                         }
                     }
                     Rectangle {
-                        width: parent.width; height: 96; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 96; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 6; Text { text: "Ses aygıtı"; color: theme.ink; font.pixelSize: 17; font.bold: true } Text { text: panel.audioState; color: theme.muted; font.pixelSize: 14 } }
                     }
                 }
@@ -208,7 +221,7 @@ Rectangle {
                     visible: panel.selectedSection === "access"
                     width: parent.width; spacing: 12
                     Rectangle {
-                        width: parent.width; height: 124; radius: 12; color: "white"; border.color: theme.line
+                        width: parent.width; height: 124; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 7; Text { text: "Kalem ve dokunmatik ekran"; color: theme.ink; font.pixelSize: 18; font.bold: true } Text { width: parent.width; text: panel.penState; color: theme.blue; font.pixelSize: 15 } Text { width: parent.width; text: "Durum algılanan giriş aygıtlarından okunur. Fiziksel kalem hassasiyeti gerçek tahtada ayrıca sınanmalıdır."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap } }
                     }
                 }
@@ -217,7 +230,7 @@ Rectangle {
                     visible: panel.selectedSection === "about"
                     width: parent.width; spacing: 12
                     Rectangle {
-                        width: parent.width; height: 260; radius: 16; color: "white"; border.color: theme.line
+                        width: parent.width; height: 260; radius: theme.radiusPanel; color: theme.surface; border.color: theme.line
                         Row {
                             anchors.fill: parent; anchors.margins: 28; spacing: 24
                             Image { width: 140; height: 140; anchors.verticalCenter: parent.verticalCenter; source: "../branding/atlas-symbol.png"; fillMode: Image.PreserveAspectFit; smooth: true }

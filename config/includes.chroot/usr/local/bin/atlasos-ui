@@ -267,7 +267,9 @@ class AtlasNetwork(QObject):
         self._networks = []
         self._busy = False
         self._message = ""
-        self._wired = {"state": "Denetleniyor", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
+        self._wifi_enabled, self._wifi_radio_available = self._read_wifi_state()
+        self._wired = {"state": "Denetleniyor", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "dhcp": "Bilinmiyor", "connectivity": ""}
+        self._active = {"type": "", "device": "", "connection": "", "address": "", "gateway": "", "dns": "", "dhcp": "Bilinmiyor", "state": "Denetleniyor"}
         self._process = QProcess(self)
         environment = QProcessEnvironment.systemEnvironment()
         environment.insert("LC_ALL", "C")
@@ -281,6 +283,10 @@ class AtlasNetwork(QObject):
         self._wired_process.setProcessEnvironment(environment)
         self._wired_process.finished.connect(self._wired_finished)
         self._wired_stage = ""
+        self._active_process = QProcess(self)
+        self._active_process.setProcessEnvironment(environment)
+        self._active_process.finished.connect(self._active_finished)
+        self._active_stage = ""
         self._probe_process = QProcess(self)
         self._probe_process.setProcessEnvironment(environment)
         self._probe_process.finished.connect(self._internet_probe_finished)
@@ -295,6 +301,41 @@ class AtlasNetwork(QObject):
     def busy(self):
         return self._busy
 
+    @Property(bool, notify=changed)
+    def wifiEnabled(self):
+        return self._wifi_enabled
+
+    @Property(bool, notify=changed)
+    def wifiRadioAvailable(self):
+        return self._wifi_radio_available
+
+    @staticmethod
+    def _read_wifi_state():
+        try:
+            result = subprocess.run(["nmcli", "radio", "wifi"], capture_output=True, text=True, timeout=2, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return False, False
+        state = result.stdout.strip().lower()
+        return state == "enabled", result.returncode == 0 and state in ("enabled", "disabled")
+
+    @Slot()
+    def toggleWifi(self):
+        if not self._wifi_radio_available:
+            self._message = "Wi-Fi anahtarı bu sistemde kullanılamıyor."
+            self.changed.emit()
+            return
+        action = "wifi-off" if self._wifi_enabled else "wifi-on"
+        self._run(action, ["radio", "wifi", "off" if self._wifi_enabled else "on"])
+
+    @Slot()
+    def reconnectWired(self):
+        device = str(self._wired.get("device", "")).strip()
+        if not device:
+            self._message = "Yeniden denenecek Ethernet aygıtı bulunamadı."
+            self.changed.emit()
+            return
+        self._run("wired-connect", ["device", "connect", device])
+
     @Property(str, notify=changed)
     def message(self):
         return self._message
@@ -302,6 +343,10 @@ class AtlasNetwork(QObject):
     @Property("QVariantMap", notify=changed)
     def wired(self):
         return self._wired
+
+    @Property("QVariantMap", notify=changed)
+    def active(self):
+        return self._active
 
     @Property(str, notify=changed)
     def internetProbeResult(self):
@@ -342,6 +387,38 @@ class AtlasNetwork(QObject):
             return
         self._wired_stage = "devices"
         self._wired_process.start("nmcli", ["-t", "-e", "yes", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"])
+        if self._active_process.state() == QProcess.NotRunning:
+            self._active_stage = "devices"
+            self._active_process.start("nmcli", ["-t", "-e", "yes", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"])
+
+    def _active_finished(self, exit_code, _status):
+        output = bytes(self._active_process.readAllStandardOutput()).decode("utf-8", "replace")
+        if self._active_stage == "devices":
+            rows = [split_nmcli_row(line) for line in output.splitlines()]
+            active = next((row for row in rows if len(row) >= 4 and row[2] == "connected" and row[1] in ("ethernet", "wifi")), None)
+            if exit_code != 0 or not active:
+                self._active = {"type": "", "device": "", "connection": "", "address": "", "gateway": "", "dns": "", "dhcp": "Bilinmiyor", "state": "Etkin bağlantı yok"}
+                self._active_stage = ""
+                self.changed.emit()
+                return
+            device, device_type, _, connection = active[:4]
+            self._active = {"type": device_type, "device": device, "connection": connection, "address": "", "gateway": "", "dns": "", "dhcp": "IP bekleniyor", "state": "Bağlı"}
+            self._active_stage = "details"
+            self._active_process.start("nmcli", ["-t", "-e", "yes", "-f", "IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,DHCP4.OPTION", "device", "show", device])
+            return
+        if self._active_stage == "details":
+            details = dict(self._active)
+            dhcp_options = 0
+            for line in output.splitlines():
+                key, _, value = line.partition(":")
+                if key.startswith("IP4.ADDRESS"): details["address"] = value
+                elif key == "IP4.GATEWAY": details["gateway"] = value
+                elif key.startswith("IP4.DNS"): details["dns"] = (details["dns"] + ", " + value).strip(", ")
+                elif key.startswith("DHCP4.OPTION") and value: dhcp_options += 1
+            details["dhcp"] = "Otomatik (DHCP)" if dhcp_options else ("Elle yapılandırılmış" if details["address"] else "IP bekleniyor")
+            self._active = details
+            self._active_stage = ""
+        self.changed.emit()
 
     def _wired_finished(self, exit_code, _status):
         output = bytes(self._wired_process.readAllStandardOutput()).decode("utf-8", "replace")
@@ -352,27 +429,30 @@ class AtlasNetwork(QObject):
                 self._wired = details
                 self._wired_stage = ""
             else:
-                self._wired = {"state": "NetworkManager okunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": "unknown"}
+                self._wired = {"state": "NetworkManager okunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "dhcp": "Bilinmiyor", "connectivity": "unknown"}
                 self._start_connectivity_check()
         elif self._wired_stage == "devices":
             rows = [split_nmcli_row(line) for line in output.splitlines()]
             ethernet = next((row for row in rows if len(row) >= 4 and row[1] == "ethernet"), None)
             if not ethernet:
-                self._wired = {"state": "Kablolu aygıt bulunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
+                self._wired = {"state": "Kablolu aygıt bulunamadı", "device": "", "carrier": "", "address": "", "gateway": "", "dns": "", "dhcp": "Bilinmiyor", "connectivity": ""}
                 self._start_connectivity_check()
             else:
                 device, _, state, connection = ethernet[:4]
                 self._wired = {"state": state, "device": device, "connection": connection, "carrier": "", "address": "", "gateway": "", "dns": "", "connectivity": ""}
                 self._wired_stage = "details"
-                self._wired_process.start("nmcli", ["-t", "-e", "yes", "-f", "GENERAL.STATE,WIRED-PROPERTIES.CARRIER,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS", "device", "show", device])
+                self._wired_process.start("nmcli", ["-t", "-e", "yes", "-f", "GENERAL.STATE,WIRED-PROPERTIES.CARRIER,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,DHCP4.OPTION", "device", "show", device])
         elif self._wired_stage == "details":
             details = dict(self._wired)
+            dhcp_options = 0
             for line in output.splitlines():
                 key, _, value = line.partition(":")
                 if key == "WIRED-PROPERTIES.CARRIER": details["carrier"] = value
                 elif key.startswith("IP4.ADDRESS"): details["address"] = value
                 elif key == "IP4.GATEWAY": details["gateway"] = value
                 elif key.startswith("IP4.DNS"): details["dns"] = (details["dns"] + ", " + value).strip(", ")
+                elif key.startswith("DHCP4.OPTION") and value: dhcp_options += 1
+            details["dhcp"] = "Otomatik (DHCP)" if dhcp_options else ("Elle yapılandırılmış" if details.get("address") else "IP bekleniyor")
             self._wired = details
             self._start_connectivity_check()
         elif self._wired_stage == "connectivity":
@@ -441,6 +521,12 @@ class AtlasNetwork(QObject):
         self._busy = False
         if exit_code != 0:
             self._message = ("Bağlantı yetkisi yok. Aktif oturumu ve ağ izinlerini kontrol edin." if "Insufficient privileges" in error else error.strip() or "Ağ işlemi tamamlanamadı.")
+        elif self._action in ("wifi-on", "wifi-off"):
+            self._wifi_enabled = self._action == "wifi-on"
+            self._wifi_radio_available = True
+            self._message = "Wi-Fi açıldı." if self._wifi_enabled else "Wi-Fi kapatıldı."
+        elif self._action == "wired-connect":
+            self._message = "Ethernet bağlantısı yeniden denendi."
         elif self._action == "list":
             networks = {}
             for line in output.splitlines():
@@ -457,7 +543,7 @@ class AtlasNetwork(QObject):
         else:
             self._message = "Bağlantı isteği gönderildi."
         self.changed.emit()
-        if self._action in ("connect", "connect-secure"):
+        if self._action in ("connect", "connect-secure", "wired-connect", "wifi-on", "wifi-off"):
             QTimer.singleShot(2000, self.refresh)
 
 

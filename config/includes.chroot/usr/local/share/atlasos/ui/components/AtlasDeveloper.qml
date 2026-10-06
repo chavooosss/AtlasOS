@@ -37,7 +37,7 @@ Item {
     Column {
         id: content
         width: page.width
-        spacing: 18
+        spacing: page.boardMode ? 22 : 18
 
         Column {
             width: parent.width; spacing: 5
@@ -50,7 +50,7 @@ Item {
         }
 
         Rectangle {
-            width: parent.width; height: 94; radius: theme.radiusCard; color: theme.paleBlue; border.color: theme.line
+            width: parent.width; height: page.boardMode ? 112 : 100; radius: theme.radiusCard; color: theme.paleBlue; border.color: theme.line
             Row {
                 anchors.fill: parent; anchors.margins: 18; spacing: 14
                 Text { text: "◉"; color: theme.blue; font.pixelSize: 27; anchors.verticalCenter: parent.verticalCenter }
@@ -78,7 +78,7 @@ Item {
                 delegate: Rectangle {
                     required property var modelData
                     width: (parent.width - parent.spacing) / parent.columns
-                    height: page.boardMode ? 102 : 88
+                    height: page.boardMode ? 112 : 96
                     radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                     Column {
                         anchors.fill: parent; anchors.margins: 16; spacing: 6
@@ -90,16 +90,17 @@ Item {
         }
 
         Rectangle {
-            width: parent.width; height: diagnostics.busy ? 242 : 194
+            width: parent.width; height: diagnostics.busy ? (page.boardMode ? 278 : 256) : (page.boardMode ? 224 : 204)
             radius: theme.radiusCard; color: theme.surface; border.color: theme.line
             Column {
                 anchors.fill: parent; anchors.margins: 18; spacing: 12
                 Text { text: "Boot Tanılama · Atlas Servisleri · Günlükler"; color: theme.ink; font.pixelSize: 19; font.bold: true }
                 Text { width: parent.width; text: "Kernel, framebuffer/DRM, Plymouth, display manager ve Atlas oturum günlüklerini toplar. Sorunu otomatik çözmez; kanıt üretir."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap }
-                Row {
+                Column {
+                    width: parent.width
                     spacing: 10
-                    AtlasButton { text: "Tüm Tanılamaları Çalıştır"; variant: "primary"; enabled: !diagnostics.busy; controlScale: page.boardMode ? 1.1 : 1.0; onClicked: { notice = ""; diagnostics.runAll() } }
-                    AtlasButton { text: "İptal"; variant: "quiet"; visible: diagnostics.busy; onClicked: diagnostics.cancel() }
+                    AtlasButton { width: parent.width; height: page.boardMode ? 76 : 64; text: "Tüm Tanılamaları Çalıştır"; variant: "primary"; enabled: !diagnostics.busy; controlScale: page.boardMode ? 1.15 : 1.0; onClicked: { notice = ""; diagnostics.runAll() } }
+                    AtlasButton { width: parent.width; height: page.boardMode ? 76 : 64; text: "Tanılamayı iptal et"; variant: "quiet"; visible: diagnostics.busy; onClicked: diagnostics.cancel() }
                 }
                 Text { visible: diagnostics.busy || diagnostics.bundleName.length > 0; text: diagnostics.stage + (diagnostics.bundleName.length > 0 ? " · " + diagnostics.bundleName : ""); color: theme.muted; font.pixelSize: 13; elide: Text.ElideMiddle; width: parent.width }
                 Rectangle { visible: diagnostics.busy; width: parent.width; height: 8; radius: 4; color: theme.disabledSurface
@@ -116,7 +117,7 @@ Item {
                 Text { width: parent.width; text: "CPU, bellek, yük ve işlem listesi o an okunur. Sistem kısa aralıklarla ölçülür; disk yazma benchmark'ı yoktur ve bellek ayırmaz."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap }
                 Row {
                     spacing: 10
-                    AtlasButton { text: "Anlık Görüntüyü Yenile"; variant: "secondary"; controlScale: page.boardMode ? 1.1 : 1.0; onClicked: refreshSnapshot() }
+                    AtlasButton { height: page.boardMode ? 76 : 64; text: "Anlık Görüntüyü Yenile"; variant: "secondary"; controlScale: page.boardMode ? 1.15 : 1.0; onClicked: refreshSnapshot() }
                 }
             }
         }
