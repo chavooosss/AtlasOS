@@ -368,12 +368,13 @@ Window {
                 font.family: theme.fontFamily
                 font.pixelSize: theme.typeBody * root.interfaceScale
             }
-            Row {
+            Column {
                 visible: powerDialog.pendingAction === ""
-                spacing: 7
-                AtlasButton { text: "Çıkış"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "logout" }
-                AtlasButton { text: "Yeniden başlat"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "restart" }
-                AtlasButton { text: "Kapat"; variant: "danger"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "shutdown" }
+                width: parent.width
+                spacing: 10
+                AtlasButton { width: parent.width; height: 68; text: "Oturumu kapat"; iconName: "power"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "logout" }
+                AtlasButton { width: parent.width; height: 68; text: "Yeniden başlat"; iconName: "refresh"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "restart" }
+                AtlasButton { width: parent.width; height: 68; text: "Bilgisayarı kapat"; iconName: "power"; variant: "danger"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "shutdown" }
             }
             AtlasButton {
                 variant: "primary"
@@ -393,6 +394,7 @@ Window {
         networkState: root.systemStatus.network
         audioState: root.systemStatus.audio
         audioController: atlasAudio
+        networkController: atlasNetwork
         boardMode: root.boardMode
         penState: root.systemStatus.pen
         onNetworkRequested: root.openTool("network")
@@ -523,6 +525,7 @@ Window {
         }
         AtlasFiles {
             id: filesView
+            boardMode: root.boardMode
             visible: root.viewMode === "files"
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
@@ -561,6 +564,7 @@ Window {
         }
         AtlasNetwork {
             visible: root.viewMode === "network"
+            boardMode: root.boardMode
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
         }
@@ -616,6 +620,7 @@ Window {
             }
         }
         AtlasNotifications {
+            boardMode: root.boardMode
             visible: root.viewMode === "notifications"
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right

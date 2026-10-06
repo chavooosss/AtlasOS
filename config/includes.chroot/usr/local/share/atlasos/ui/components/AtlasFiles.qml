@@ -5,6 +5,7 @@ import "../theme"
 
 Item {
     id: files
+    property bool boardMode: false
     property string kind: ""
     property url homeFolder: "file:///home/atlas"
     property url booksFolder: "file:///home/atlas/Ders%20Kitaplari"
@@ -61,15 +62,15 @@ Item {
     Column {
         anchors.fill: parent
         anchors.margins: 22
-        spacing: 14
+        spacing: files.boardMode ? 18 : 14
         Text {
-            text: files.kind === "books" ? "Ders Kitapları" : files.kind === "library" ? "Kaynak Rafı" :
+            text: files.kind === "books" ? "Ders Kitapları" : files.kind === "library" ? "Kaynak Rafı" : files.kind === "files" ? "Dosyalar" :
                   files.kind === "pdf" ? "PDF Seç" :
                   files.kind === "presentation" ? "Sunum Seç" : "Video Seç"
-            color: theme.ink; font.pixelSize: 24; font.bold: true
+            color: theme.ink; font.family: theme.fontFamily; font.pixelSize: files.boardMode ? 32 : 28; font.bold: true
         }
         Row {
-            width: parent.width; height: 64; spacing: 8
+            width: parent.width; height: files.boardMode ? 76 : 68; spacing: 10
             Repeater {
                 model: [
                     {title: "Kitaplık", folder: files.booksFolder},
@@ -78,10 +79,10 @@ Item {
                     {title: "USB", folder: "usb://removable"}
                 ]
                 delegate: Rectangle {
-                    width: Math.max(112, (files.width - 90) / 4); height: 64; radius: 6
+                    width: Math.max(112, (files.width - 90) / 4); height: files.boardMode ? 76 : 68; radius: theme.radiusCard
                     color: (modelData.folder === "usb://removable" ? files.currentFolder.toString().indexOf("file:///media/") === 0 || files.currentFolder.toString().indexOf("file:///run/media/") === 0 : files.currentFolder.toString() === modelData.folder.toString()) ? theme.navy : "white"
                     border.color: theme.line
-                    Text { anchors.centerIn: parent; text: modelData.title; color: parent.color === theme.navy ? "white" : theme.ink; font.pixelSize: 15; font.bold: true }
+                    Text { anchors.centerIn: parent; text: modelData.title; color: parent.color === theme.navy ? "white" : theme.ink; font.family: theme.fontFamily; font.pixelSize: files.boardMode ? 17 : 16; font.bold: true }
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
@@ -105,10 +106,10 @@ Item {
         }
         Controls.TextField {
             width: parent.width
-            height: 58
+            height: files.boardMode ? 72 : 64
             visible: files.kind === "library" || files.kind === "books" || files.kind === "files"
             placeholderText: "Bu klasörde kaynak ara"
-            font.pixelSize: 16
+            font.family: theme.fontFamily; font.pixelSize: files.boardMode ? 19 : 17
             onTextChanged: files.searchText = text.trim().toLocaleLowerCase()
             background: Rectangle { radius: 10; color: "white"; border.color: theme.line }
         }
@@ -124,14 +125,14 @@ Item {
             text: files.usbMessage; color: theme.blue; font.pixelSize: 14; elide: Text.ElideRight
         }
         Row {
-            width: parent.width; height: 64; spacing: 10
+            width: parent.width; height: files.boardMode ? 76 : 68; spacing: 10
             Rectangle {
-                width: 64; height: 64; radius: 6; color: "white"; border.color: theme.line
+                width: files.boardMode ? 76 : 68; height: files.boardMode ? 76 : 68; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                 AtlasIcon { anchors.centerIn: parent; name: "arrow-left"; strokeColor: theme.ink }
                 MouseArea { anchors.fill: parent; onClicked: files.goParent() }
             }
             Rectangle {
-                width: parent.width - 74 - (files.currentFolder.toString().indexOf("file:///media/") === 0 || files.currentFolder.toString().indexOf("file:///run/media/") === 0 ? 198 : 0); height: 64; radius: 6; color: "white"; border.color: theme.line
+                width: parent.width - (files.boardMode ? 86 : 78) - (files.currentFolder.toString().indexOf("file:///media/") === 0 || files.currentFolder.toString().indexOf("file:///run/media/") === 0 ? 198 : 0); height: files.boardMode ? 76 : 68; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
                 Text {
                     anchors.fill: parent; anchors.margins: 14; verticalAlignment: Text.AlignVCenter
                     text: atlasFs.displayPath(files.currentFolder.toString())
@@ -140,7 +141,7 @@ Item {
             }
             Controls.Button {
                 visible: files.currentFolder.toString().indexOf("file:///media/") === 0 || files.currentFolder.toString().indexOf("file:///run/media/") === 0
-                width: visible ? 188 : 0; height: 64
+                width: visible ? 188 : 0; height: files.boardMode ? 76 : 68
                 text: "USB'yi Çıkar"; font.pixelSize: 14
                 onClicked: {
                     var result = atlasFs.ejectRemovableVolume(files.currentFolder.toString())
@@ -150,8 +151,8 @@ Item {
             }
         }
         Rectangle {
-            width: parent.width; height: Math.max(100, parent.height - 180); radius: 6
-            color: "white"; border.color: theme.line
+            width: parent.width; height: Math.max(100, parent.height - 190); radius: theme.radiusCard
+            color: theme.surface; border.color: theme.line
             ListView {
                 id: list
                 visible: files.folderAvailable
@@ -160,24 +161,24 @@ Item {
                 model: folderModel
                 delegate: Rectangle {
                     property bool matchesSearch: files.searchText.length === 0 || fileIsDir || fileName.toLocaleLowerCase().indexOf(files.searchText) >= 0
-                    width: list.width; height: matchesSearch ? 64 : 0; radius: 5
+                    width: list.width; height: matchesSearch ? (files.boardMode ? 76 : 68) : 0; radius: 10
                     visible: matchesSearch
-                    color: touch.pressed ? "#e5f2f6" : "white"
+                    color: touch.pressed ? theme.softBlue : touch.containsMouse ? theme.surfaceRaised : theme.surface
                     AtlasIcon {
                         x: 12; anchors.verticalCenter: parent.verticalCenter
-                        width: 28; height: 28
+                        width: files.boardMode ? 32 : 28; height: width
                         name: fileIsDir ? "folder" : files.fileKind(fileName) === "pdf" ? "pdf" :
                               files.fileKind(fileName) === "presentation" ? "presentation" :
                               files.fileKind(fileName) === "video" ? "video" : "books"
                         strokeColor: fileIsDir ? theme.blue : theme.ink
                     }
                     Text {
-                        x: 56; width: parent.width - 110; anchors.verticalCenter: parent.verticalCenter
-                        text: fileName; color: theme.ink; font.pixelSize: 17; elide: Text.ElideRight
+                        x: files.boardMode ? 64 : 56; width: parent.width - (files.boardMode ? 122 : 110); anchors.verticalCenter: parent.verticalCenter
+                        text: fileName; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: files.boardMode ? 19 : 17; elide: Text.ElideRight
                     }
                     AtlasIcon { anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter; name: "arrow-right"; strokeColor: theme.muted }
                     MouseArea {
-                        id: touch; anchors.fill: parent
+                        id: touch; anchors.fill: parent; hoverEnabled: true
                         onClicked: {
                             if (fileIsDir) files.currentFolder = fileUrl
                             else files.chosen((files.kind === "books" || files.kind === "files") ? files.fileKind(fileName) : files.kind, fileUrl.toString())

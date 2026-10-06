@@ -470,12 +470,13 @@ class ShellComponentsTests(unittest.TestCase):
         network._wired_finished(0, None)
         self.assertEqual(network.wired["device"], "enp1s0")
         self.assertEqual(fake.started[0], "nmcli")
-        fake.output = b"WIRED-PROPERTIES.CARRIER:on\nIP4.ADDRESS[1]:10.2.3.4/24\nIP4.GATEWAY:10.2.3.1\nIP4.DNS[1]:10.2.3.53\n"
+        fake.output = b"WIRED-PROPERTIES.CARRIER:on\nIP4.ADDRESS[1]:10.2.3.4/24\nIP4.GATEWAY:10.2.3.1\nIP4.DNS[1]:10.2.3.53\nDHCP4.OPTION[1]:ip_address=10.2.3.4\n"
         network._wired_finished(0, None)
         self.assertEqual(network.wired["carrier"], "on")
         self.assertEqual(network.wired["address"], "10.2.3.4/24")
         self.assertEqual(network.wired["gateway"], "10.2.3.1")
         self.assertEqual(network.wired["dns"], "10.2.3.53")
+        self.assertEqual(network.wired["dhcp"], "Otomatik (DHCP)")
         self.assertEqual(fake.started, ("nmcli", ["networking", "connectivity", "check"]))
         fake.output = b"full\n"
         network._wired_finished(0, None)
@@ -487,6 +488,43 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn('function connectivityLabel(value)', network)
         self.assertIn('value === "portal"', network)
         self.assertIn("Ethernet'e özel değildir", network)
+        self.assertIn('text: "IP ayarı"', network)
+        self.assertIn("reconnectWired()", network)
+        self.assertIn("toggleWifi()", network)
+
+    def test_wifi_quick_setting_uses_networkmanager_radio_control(self):
+        with patch.object(self.ui.subprocess, "run", return_value=type("Result", (), {"returncode": 0, "stdout": "enabled\n"})()):
+            network = self.ui.AtlasNetwork()
+        self.assertTrue(network.wifiEnabled)
+        self.assertTrue(network.wifiRadioAvailable)
+        with patch.object(network, "_run") as run:
+            network.toggleWifi()
+        run.assert_called_once_with("wifi-off", ["radio", "wifi", "off"])
+
+    def test_active_wifi_connection_exposes_ip_and_dhcp_summary(self):
+        class OutputProcess:
+            def __init__(self):
+                self.output = b"wlan0:wifi:connected:Sinif Agi\\: 5G\n"
+                self.started = None
+
+            def readAllStandardOutput(self):
+                return self.output
+
+            def start(self, command, args):
+                self.started = (command, args)
+
+        with patch.object(self.ui.subprocess, "run", return_value=type("Result", (), {"returncode": 0, "stdout": "enabled\n"})()):
+            network = self.ui.AtlasNetwork()
+        fake = OutputProcess()
+        network._active_process = fake
+        network._active_stage = "devices"
+        network._active_finished(0, None)
+        self.assertEqual(network.active["type"], "wifi")
+        self.assertEqual(fake.started[1][-1], "wlan0")
+        fake.output = b"IP4.ADDRESS[1]:192.168.1.44/24\nIP4.GATEWAY:192.168.1.1\nDHCP4.OPTION[1]:ip_address=192.168.1.44\n"
+        network._active_finished(0, None)
+        self.assertEqual(network.active["address"], "192.168.1.44/24")
+        self.assertEqual(network.active["dhcp"], "Otomatik (DHCP)")
 
     def test_header_network_status_distinguishes_link_from_internet(self):
         ui_dir = UI_PATH.parents[1] / "share/atlasos/ui"
