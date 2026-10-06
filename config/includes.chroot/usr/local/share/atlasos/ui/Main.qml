@@ -22,6 +22,7 @@ Window {
     // Keep board targets generous while allowing the timetable and workspace to reflow.
     property real interfaceScale: root.boardMode ? (root.width < 1440 ? 1.0 : 1.08) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
     property string workspaceTitle: ""
+    property bool notificationsOpen: false
     property var lessons: []
     property var scheduleTimeline: []
     property var weeklySchedules: []
@@ -74,9 +75,8 @@ Window {
             settingsError = ""
             viewMode = "settings"
         } else if (target === "notifications") {
-            workspaceTitle = "Bildirimler"
-            viewMode = "notifications"
-            atlasAlerts.markRead()
+            notificationsOpen = !notificationsOpen
+            if (notificationsOpen) atlasAlerts.markRead()
         } else if (target === "whiteboard") {
             workspaceTitle = "Beyaz Tahta"
             viewMode = "whiteboard"
@@ -349,45 +349,10 @@ Window {
         }
     }
 
-    AtlasDialog {
+    AtlasPowerMenu {
         id: powerDialog
-        title: "Oturum ve güç"
-        modal: true
-        anchors.centerIn: parent
-        width: Math.min(440 * root.interfaceScale, root.width - 48)
-        dialogScale: root.interfaceScale
-        property string pendingAction: ""
-        Column {
-            spacing: 10
-            width: parent.width
-            Controls.Label {
-                text: powerDialog.pendingAction === "" ? "Bir işlem seçin" : "Bu işlem şimdi uygulanacak. Onaylıyor musunuz?"
-                wrapMode: Text.WordWrap
-                width: parent.width
-                color: theme.ink
-                font.family: theme.fontFamily
-                font.pixelSize: theme.typeBody * root.interfaceScale
-            }
-            Column {
-                visible: powerDialog.pendingAction === ""
-                width: parent.width
-                spacing: 10
-                AtlasButton { width: parent.width; height: 68; text: "Oturumu kapat"; iconName: "power"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "logout" }
-                AtlasButton { width: parent.width; height: 68; text: "Yeniden başlat"; iconName: "refresh"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "restart" }
-                AtlasButton { width: parent.width; height: 68; text: "Bilgisayarı kapat"; iconName: "power"; variant: "danger"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "shutdown" }
-            }
-            AtlasButton {
-                variant: "primary"
-                controlScale: root.interfaceScale
-                visible: powerDialog.pendingAction !== ""
-                text: "Onayla"
-                onClicked: { atlasPower.run(powerDialog.pendingAction); powerDialog.close() }
-            }
-            AtlasButton { visible: powerDialog.pendingAction !== ""; text: "Vazgeç"; controlScale: root.interfaceScale; onClicked: powerDialog.pendingAction = "" }
-        }
-        onOpened: pendingAction = ""
+        onActionRequested: function(action) { atlasPower.run(action) }
     }
-
     AtlasHeader {
         id: header
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
@@ -398,18 +363,21 @@ Window {
         boardMode: root.boardMode
         penState: root.systemStatus.pen
         onNetworkRequested: root.openTool("network")
+        onSettingsRequested: root.openTool("settings")
+        onPowerRequested: root.openTool("power")
         notificationCount: atlasAlerts.unread
         onNotificationsRequested: root.openTool("notifications")
     }
     AtlasSidebar {
         id: sidebar
-        visible: root.viewMode === "dashboard"
+        visible: ["dashboard", "settings", "network", "files"].indexOf(root.viewMode) >= 0
         width: root.boardMode ? Math.max(142, Math.min(166, root.width * 0.09)) : Math.max(112, Math.min(144, root.width * 0.086))
         anchors.top: header.bottom; anchors.bottom: parent.bottom; anchors.left: parent.left
-        currentPage: root.page
+        currentPage: root.viewMode === "settings" || root.viewMode === "network" ? "settings" : root.viewMode === "files" ? "books" : root.page
         itemScale: root.interfaceScale
         onPageSelected: {
             if (page === "settings") root.openTool("settings")
+            else if (page === "books") root.openTool("files")
             else { root.page = page; root.viewMode = "dashboard" }
         }
         onPowerRequested: root.openTool("power")
@@ -464,13 +432,14 @@ Window {
         id: workspace
         visible: root.viewMode !== "dashboard"
         anchors.top: header.bottom; anchors.bottom: parent.bottom; 
-        anchors.left: parent.left; anchors.right: parent.right
+        anchors.left: sidebar.visible ? sidebar.right : parent.left; anchors.right: parent.right
         color: theme.canvas
 
         Rectangle {
             id: toolbar
             anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-            height: 70 * root.interfaceScale; color: "#f7faff"; border.color: theme.line
+            visible: ["settings", "network", "files"].indexOf(root.viewMode) < 0
+            height: visible ? 70 * root.interfaceScale : 0; color: "#f7faff"; border.color: theme.line
             Row {
                 anchors.left: parent.left; anchors.leftMargin: 18 * root.interfaceScale
                 anchors.verticalCenter: parent.verticalCenter; spacing: 9 * root.interfaceScale
@@ -567,8 +536,13 @@ Window {
             boardMode: root.boardMode
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
+            onSettingsSectionRequested: function(key) {
+                root.openTool("settings", true)
+                settingsView.selectedSection = key
+            }
         }
-    AtlasSettings {
+        AtlasSettings {
+            id: settingsView
             visible: root.viewMode === "settings"
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
@@ -619,18 +593,25 @@ Window {
                 }
             }
         }
-        AtlasNotifications {
-            boardMode: root.boardMode
-            visible: root.viewMode === "notifications"
-            anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
-            anchors.left: parent.left; anchors.right: parent.right
-        }
     }
     AtlasLauncher {
         id: launcher
         onSelected: function(key) { root.openTool(key) }
         anchors.top: header.bottom; anchors.bottom: parent.bottom; 
         anchors.left: parent.left; anchors.right: parent.right
+    }
+    AtlasNotifications {
+        z: 950
+        visible: root.notificationsOpen
+        boardMode: root.boardMode
+        width: root.width < 1450 ? 432 : 530
+        anchors.top: header.bottom
+        anchors.topMargin: 10
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 16
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        onCloseRequested: root.notificationsOpen = false
     }
 
     Rectangle {

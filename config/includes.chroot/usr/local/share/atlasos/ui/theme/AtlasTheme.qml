@@ -4,22 +4,48 @@ QtObject {
     // Atlas Design Language: a small set of shared semantic tokens.
     // Values extend the existing 0.6.0 palette rather than replacing it.
     readonly property color navy: "#123d68"
-    readonly property color deepNavy: "#0d2948"
-    readonly property color blue: "#3e86e6"
-    readonly property color paleBlue: "#eaf4fc"
-    readonly property color softBlue: "#dceaf8"
+    readonly property color deepNavy: "#0b2342"
+    readonly property color shell: "#0b2342"
+    readonly property color shellRaised: "#143b66"
+    readonly property color shellLine: "#315477"
+    readonly property color shellText: "#f3f8ff"
+    readonly property color shellMutedText: "#b7cbe2"
+    readonly property color blue: "#2879df"
+    readonly property color paleBlue: "#eaf3fc"
+    readonly property color softBlue: "#d8e9fc"
     readonly property color ink: "#10294d"
     readonly property color muted: "#647997"
-    readonly property color canvas: "#f3f8fd"
+    readonly property color canvas: "#eef4fa"
     readonly property color surface: "#ffffff"
-    readonly property color surfaceRaised: "#f7faff"
-    readonly property color line: "#e2eaf2"
+    readonly property color surfaceRaised: "#f5f8fc"
+    readonly property color line: "#dce6f1"
     readonly property color red: "#f05261"
     readonly property color green: "#17a982"
     readonly property color amber: "#f0aa32"
     readonly property color disabledSurface: "#edf2f7"
     readonly property color disabledInk: "#8a9bb0"
     readonly property color focus: "#236fcb"
+    // Reference-driven system surfaces share these semantic names.
+    readonly property color atlasNavy: navy
+    readonly property color atlasNavyDeep: deepNavy
+    readonly property color atlasBlue: "#116cf1"
+    readonly property color atlasBlueHover: "#075bd6"
+    readonly property color atlasBlueSoft: "#dcecff"
+    readonly property color surfaceMuted: "#edf4fb"
+    readonly property color textPrimary: ink
+    readonly property color textSecondary: muted
+    readonly property color textMuted: "#8395ad"
+    readonly property color borderSubtle: line
+    readonly property color success: green
+    readonly property color warning: amber
+    readonly property color danger: red
+    readonly property real radiusMedium: 12
+    readonly property real radiusLarge: 18
+    readonly property real spacingXs: space2
+    readonly property real spacingSm: space3
+    readonly property real spacingMd: space4
+    readonly property real spacingLg: space5
+    readonly property real spacingXl: space6
     readonly property real space1: 4
     readonly property real space2: 8
     readonly property real space3: 12

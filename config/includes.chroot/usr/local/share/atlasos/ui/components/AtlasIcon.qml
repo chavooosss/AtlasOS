@@ -51,6 +51,8 @@ Canvas {
         case "bulb": circle(12,10,6); path([9,16,9,18,15,18,15,16]); path([10,21,14,21]); path([12,1,12,2]); path([3,10,5,10]); path([19,10,21,10]); path([5,3,7,5]); path([17,5,19,3]); break
         case "arrow-right": path([4,12,20,12,14,6]); path([20,12,14,18]); break
         case "arrow-left": path([20,12,4,12,10,6]); path([4,12,10,18]); break
+        case "chevron-down": path([5,9,12,16,19,9]); break
+        case "chevron-up": path([5,15,12,8,19,15]); break
         case "refresh": path([20,8,20,3,15,3]); c.beginPath(); c.arc(12,12,8,-2.3,0.15); c.stroke(); path([4,16,4,21,9,21]); c.beginPath(); c.arc(12,12,8,0.85,3.3); c.stroke(); break
         case "folder": path([2,7,2,20,22,20,22,8,11,8,9,5,2,5,2,7]); break
         case "search": circle(10,10,6); path([14.5,14.5,21,21]); break

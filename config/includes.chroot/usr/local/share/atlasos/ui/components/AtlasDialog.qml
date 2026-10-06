@@ -10,7 +10,7 @@ Controls.Dialog {
     padding: 24 * dialogScale
     spacing: 18 * dialogScale
     focus: true
-    Controls.Overlay.modal: Rectangle { color: "#6b7d91"; opacity: 0.24 }
+    Controls.Overlay.modal: Rectangle { color: theme.deepNavy; opacity: 0.42 }
     header: Rectangle {
         implicitHeight: 58 * dialog.dialogScale
         color: "transparent"

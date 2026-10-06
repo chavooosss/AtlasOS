@@ -50,14 +50,14 @@ Item {
         }
 
         Rectangle {
-            width: parent.width; height: page.boardMode ? 112 : 100; radius: theme.radiusCard; color: theme.paleBlue; border.color: theme.line
+            width: parent.width; height: page.boardMode ? 112 : 100; radius: theme.radiusPanel; color: theme.navy
             Row {
                 anchors.fill: parent; anchors.margins: 18; spacing: 14
-                Text { text: "◉"; color: theme.blue; font.pixelSize: 27; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "◉"; color: "#73caff"; font.pixelSize: 27; anchors.verticalCenter: parent.verticalCenter }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter; spacing: 5
-                    Text { text: "Korumalı dahili depolama"; color: theme.ink; font.pixelSize: 17; font.bold: true }
-                    Text { text: "Dahili diskler salt okunur envanterdir. Disk yazma testi, otomatik mount ve onarım yoktur."; color: theme.muted; font.pixelSize: 13; wrapMode: Text.WordWrap; width: content.width - 90 }
+                    Text { text: "Korumalı dahili depolama"; color: theme.shellText; font.pixelSize: 17; font.bold: true }
+                    Text { text: "Dahili diskler salt okunur envanterdir. Disk yazma testi, otomatik mount ve onarım yoktur."; color: theme.shellMutedText; font.pixelSize: 13; wrapMode: Text.WordWrap; width: content.width - 90 }
                 }
             }
         }
@@ -131,7 +131,7 @@ Item {
                 Row {
                     width: parent.width
                     spacing: 10
-                    Controls.ComboBox {
+                    AtlasComboBox {
                         id: targetSelector; width: Math.max(180, Math.min(300, parent.width - 360))
                         model: page.exportTargets; textRole: "device"
                         displayText: currentIndex >= 0 && currentIndex < page.exportTargets.length ? page.exportTargets[currentIndex].device + " · USB · " + Math.round(page.exportTargets[currentIndex].size_bytes / 1073741824 * 10) / 10 + " GB" : "Harici USB bellek bekleniyor"

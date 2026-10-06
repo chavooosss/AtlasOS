@@ -17,6 +17,8 @@ Rectangle {
     Component.onCompleted: if (atlasValidateAudioPopup) audioPopup.open()
     signal networkRequested()
     signal notificationsRequested()
+    signal settingsRequested()
+    signal powerRequested()
 
     height: width < 1080 ? 66 : 74
     color: "#f7faff"
@@ -182,98 +184,28 @@ Rectangle {
     Popup {
         id: audioPopup
         objectName: "atlasAudioPopup"
-        x: Math.max(8, Math.min(header.width - width - 12, audioStatus.mapToItem(header, 0, 0).x + audioStatus.width / 2 - width / 2))
+        x: Math.max(12, header.width - width - 22)
         y: header.height + 8
-        width: Math.min(header.boardMode ? 440 : 400, header.width - 24)
-        padding: header.boardMode ? 22 : 20
+        width: Math.min(header.width - 24, header.width < 1450 ? 506 : 594)
+        padding: header.width < 1450 ? 20 : 24
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        background: Rectangle { color: theme.surface; radius: theme.radiusPanel; border.color: theme.line; border.width: 1 }
-        contentItem: Column {
-            spacing: 15
-            Text { text: "Hızlı Ayarlar"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 22; font.bold: true }
-            Text { text: "Ağ, ses ve ekran durumuna hızlı erişim"; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: 14; wrapMode: Text.WordWrap; width: parent.width }
-            Row {
-                width: parent.width
-                spacing: 12
-                Repeater {
-                    model: 2
-                    delegate: Rectangle {
-                        required property int index
-                        width: (parent.width - parent.spacing) / 2
-                        height: header.boardMode ? 98 : 86
-                        radius: theme.radiusCard
-                        color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.navy : theme.paleBlue
-                        border.color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.navy : theme.line
-                        AtlasIcon { x: 14; y: 14; width: 24; height: 24; name: index === 0 ? "network" : "settings"; strokeColor: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.surface : theme.blue }
-                        Text {
-                            x: 14; y: 42; width: parent.width - 28
-                            text: index === 0 ? "Wi-Fi" : "Ethernet"
-                            color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.surface : theme.ink
-                            font.family: theme.fontFamily; font.pixelSize: 15; font.bold: true; elide: Text.ElideRight
-                        }
-                        Text {
-                            x: 14; y: 63; width: parent.width - 28
-                            text: index === 0 ? (!header.networkController || !header.networkController.wifiRadioAvailable ? "Durum bilinmiyor" : header.networkController.wifiEnabled ? "Açık" : "Kapalı") : (header.networkState || "Durum bilinmiyor")
-                            color: index === 0 && header.networkController && header.networkController.wifiRadioAvailable && header.networkController.wifiEnabled ? theme.softBlue : theme.muted
-                            font.family: theme.fontFamily; font.pixelSize: 12; elide: Text.ElideRight
-                        }
-                        MouseArea {
-                            anchors.fill: parent; enabled: index === 0 && header.networkController && header.networkController.wifiRadioAvailable
-                            onClicked: header.networkController.toggleWifi()
-                        }
-                    }
-                }
-            }
-            AtlasButton { objectName: "atlasQuickNetworkButton"; width: parent.width; text: "Ağları ve bağlantı ayrıntılarını yönet"; iconName: "network"; variant: "secondary"; controlScale: header.boardMode ? 1.1 : 1.0; onClicked: { audioPopup.close(); header.networkRequested() } }
-            Rectangle { width: parent.width; height: 1; color: theme.line }
-            Text { text: "Ses"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 18; font.bold: true }
-            Row {
-                width: parent.width
-                spacing: 12
-                AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 23; height: 23; name: !header.audioController || header.audioController.muted ? "volume-muted" : header.audioController.volume < 35 ? "volume-low" : "volume"; strokeColor: theme.navy }
-                AtlasSlider {
-                    id: volumeSlider
-                    width: parent.width - 72
-                    from: 0; to: 100; stepSize: 1
-                    value: header.audioController && header.audioController.available ? header.audioController.volume : 0
-                    enabled: header.audioController && header.audioController.available
-                    onMoved: if (header.audioController) header.audioController.setVolume(Math.round(value))
-                }
-                Text { width: 36; anchors.verticalCenter: parent.verticalCenter; text: Math.round(volumeSlider.value) + "%"; color: theme.ink; font.pixelSize: 14; horizontalAlignment: Text.AlignRight }
-            }
-            AtlasButton {
-                width: parent.width
-                controlScale: header.boardMode ? 1.1 : 1
-                text: header.audioController && header.audioController.muted ? "Sesi Aç" : "Sessize Al"
-                iconName: header.audioController && header.audioController.muted ? "volume" : "volume-muted"
-                enabled: header.audioController && header.audioController.available
-                variant: "secondary"
-                onClicked: header.audioController.toggleMute()
-            }
-            Rectangle { width: parent.width; height: 1; color: theme.line }
-            Row {
-                width: parent.width; spacing: 12
-                AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 23; height: 23; name: "bulb"; strokeColor: theme.muted }
-                Column {
-                    width: parent.width - 42; spacing: 4
-                    Text { text: "Ekran parlaklığı"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: 16; font.bold: true }
-                    Text { width: parent.width; text: "Bu ekran için Atlas üzerinden parlaklık denetimi kullanılamıyor."; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: 13; wrapMode: Text.WordWrap }
-                }
-            }
-            Text {
-                visible: !header.audioController || !header.audioController.available
-                width: parent.width
-                text: "Ses aygıtı şu anda kullanılamıyor."
-                color: theme.muted
-                font.pixelSize: 13
-                wrapMode: Text.WordWrap
-            }
+        background: Rectangle {
+            color: theme.surface
+            radius: theme.radiusPanel
+            border.color: theme.borderSubtle
+            border.width: 1
         }
-        Connections {
-            target: header.audioController
-            function onChanged() { if (!volumeSlider.pressed && header.audioController.available) volumeSlider.value = header.audioController.volume }
+        contentItem: AtlasQuickSettings {
+            width: audioPopup.width - audioPopup.leftPadding - audioPopup.rightPadding
+            compact: header.width < 1450
+            audioController: header.audioController
+            networkController: header.networkController
+            networkState: header.networkState
+            onNetworkRequested: { audioPopup.close(); header.networkRequested() }
+            onSettingsRequested: { audioPopup.close(); header.settingsRequested() }
+            onPowerRequested: { audioPopup.close(); header.powerRequested() }
         }
     }
 }
