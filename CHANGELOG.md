@@ -11,7 +11,7 @@ This is a selected milestone summary, not a complete reconstruction of AtlasOS d
 
 ### Changed
 
-- Atlas system-interface visual refinement continues in PR #10; it is not yet part of `main` until that PR is merged.
+- Atlas system interfaces were refreshed with a consistent Atlas visual language, improved touch targets, responsive Quick Settings behavior, and custom Atlas controls.
 - Release and validation documentation now distinguishes the public source repository from the unpublished ISO candidate.
 
 ## [0.6.3] - 2026-10-05 — Development Preview / Release Candidate
