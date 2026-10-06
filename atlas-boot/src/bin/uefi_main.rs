@@ -2,7 +2,7 @@
 #![no_main]
 
 use alloc::vec::Vec;
-use atlas_boot_manager::{Key, UiState, render};
+use atlas_boot_manager::{Key, UiState, gop_mode_preferences, render};
 use core::time::Duration;
 use uefi::prelude::*;
 use uefi::proto::console::gop::{BltOp, BltPixel, GraphicsOutput, PixelFormat};
@@ -97,13 +97,17 @@ fn run() -> uefi::Result {
 fn present_frame(state: &UiState) -> uefi::Result {
     let handle = uefi::boot::get_handle_for_protocol::<GraphicsOutput>()?;
     let mut gop = uefi::boot::open_protocol_exclusive::<GraphicsOutput>(handle)?;
-    if let Some((want_w, want_h)) = preferred_mode()
-        && gop.current_mode_info().resolution() != (want_w, want_h)
-        && let Some(mode) = gop
+    for (want_w, want_h) in gop_mode_preferences(preferred_mode()).into_iter().flatten() {
+        if gop.current_mode_info().resolution() == (want_w, want_h) {
+            break;
+        }
+        if let Some(mode) = gop
             .modes()
             .find(|mode| mode.info().resolution() == (want_w, want_h))
-    {
-        gop.set_mode(&mode)?;
+            && gop.set_mode(&mode).is_ok()
+        {
+            break;
+        }
     }
     let mode = gop.current_mode_info();
     let (width, height) = mode.resolution();

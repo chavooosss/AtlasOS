@@ -6,6 +6,21 @@ use alloc::vec::Vec;
 
 pub const DESIGN_W: u32 = 1672;
 pub const DESIGN_H: u32 = 941;
+
+/// Preferred GOP modes for the classroom displays currently targeted by Atlas.
+/// A build-time request is tried first for explicit validation builds; normal
+/// builds start with 1080p and fall back to the supported classroom modes.
+pub fn gop_mode_preferences(requested: Option<(usize, usize)>) -> [Option<(usize, usize)>; 5] {
+    [
+        requested,
+        Some((1920, 1080)),
+        Some((1366, 768)),
+        // OVMF's QEMU std-VGA GOP surface is eight-pixel aligned.
+        Some((1368, 768)),
+        Some((1280, 720)),
+    ]
+}
+
 pub const GLYPH_ATLAS_W: usize = 768;
 pub const LANDSCAPE_W: usize = 1672;
 pub const LANDSCAPE_H: usize = 275;
@@ -895,6 +910,67 @@ mod tests {
     }
 
     #[test]
+    fn required_turkish_glyphs_have_visible_pixels_at_every_raster_size() {
+        for face in 0..5 {
+            let atlas = GLYPH_ATLASES[face];
+            for ch in "çÇğĞıİöÖşŞüÜ".chars() {
+                let glyph = GLYPHS
+                    .iter()
+                    .find(|glyph| glyph.ch == ch && glyph.face as usize == face)
+                    .unwrap_or_else(|| panic!("missing {ch} in face {face}"));
+                let visible = (0..glyph.raster_height as usize).any(|y| {
+                    let start = (glyph.y as usize + y) * GLYPH_ATLAS_W + glyph.x as usize;
+                    atlas[start..start + glyph.raster_width as usize]
+                        .iter()
+                        .any(|coverage| *coverage != 0)
+                });
+                assert!(visible, "blank raster for {ch} in face {face}");
+            }
+        }
+    }
+
+    #[test]
+    fn gop_resolution_preferences_keep_the_1080p_primary_and_documented_fallbacks() {
+        assert_eq!(
+            gop_mode_preferences(None),
+            [
+                None,
+                Some((1920, 1080)),
+                Some((1366, 768)),
+                Some((1368, 768)),
+                Some((1280, 720)),
+            ]
+        );
+        assert_eq!(
+            gop_mode_preferences(Some((1368, 768))),
+            [
+                Some((1368, 768)),
+                Some((1920, 1080)),
+                Some((1366, 768)),
+                Some((1368, 768)),
+                Some((1280, 720)),
+            ]
+        );
+        let preferred = gop_mode_preferences(None);
+        let available = [(1024, 768), (1366, 768), (1280, 720)];
+        assert_eq!(
+            preferred
+                .into_iter()
+                .flatten()
+                .find(|resolution| available.contains(resolution)),
+            Some((1366, 768))
+        );
+        let available = [(1024, 768), (1280, 720)];
+        assert_eq!(
+            preferred
+                .into_iter()
+                .flatten()
+                .find(|resolution| available.contains(resolution)),
+            Some((1280, 720))
+        );
+    }
+
+    #[test]
     fn embedded_phase5_assets_have_expected_dimensions() {
         assert_eq!(LANDSCAPE.len(), LANDSCAPE_W * LANDSCAPE_H * 4);
         assert_eq!(BOOT_MARK.len(), BOOT_MARK_SIZE * BOOT_MARK_SIZE * 4);
@@ -1037,6 +1113,14 @@ mod tests {
     fn all_reference_resolutions_render_inside_bounds() {
         for (w, h) in [(1920, 1080), (1366, 768), (1280, 720)] {
             let mut c = render(w, h, 0, 10, None).unwrap();
+            let expected_scale = (w as f32 / DESIGN_W as f32).min(h as f32 / DESIGN_H as f32);
+            assert!((c.scale - expected_scale).abs() < 0.000_01);
+            let (_, _, render_w, render_h) = c.map_rect(0, 0, DESIGN_W as i32, DESIGN_H as i32);
+            assert!(render_w <= w as i32 && render_h <= h as i32);
+            assert!(
+                (render_w as f32 / DESIGN_W as f32 - render_h as f32 / DESIGN_H as f32).abs()
+                    < 0.002
+            );
             assert_eq!(c.pixels.len(), w * h);
             c.line(-100, -100, 2000, 1200, 6, [255, 255, 255, 255]);
             c.rounded(-30, -20, 100, 80, 28, [255, 255, 255, 200]);
