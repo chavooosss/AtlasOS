@@ -92,7 +92,7 @@ Rectangle {
                                     Text { text: "Wi-Fi"; color: theme.ink; font.pixelSize: 21; font.bold: true }
                                     Text { width: parent.width; text: atlasNetwork.wifiRadioAvailable ? (atlasNetwork.wifiEnabled ? "Kablosuz ağ açık" : "Kablosuz ağ kapalı") : "Denetleyici bulunamadı"; color: theme.muted; font.pixelSize: 13; elide: Text.ElideRight }
                                 }
-                                Controls.Switch { id: wifiSwitch; anchors.verticalCenter: parent.verticalCenter; checked: atlasNetwork.wifiEnabled; enabled: atlasNetwork.wifiRadioAvailable && !atlasNetwork.busy; onClicked: atlasNetwork.toggleWifi() }
+                                AtlasSwitch { id: wifiSwitch; anchors.verticalCenter: parent.verticalCenter; checked: atlasNetwork.wifiEnabled; enabled: atlasNetwork.wifiRadioAvailable && !atlasNetwork.busy; onToggled: atlasNetwork.toggleWifi() }
                             }
                             Rectangle { width: parent.width; height: 55; radius: 10; color: theme.surfaceMuted
                                 Text { anchors.fill: parent; anchors.margins: 13; verticalAlignment: Text.AlignVCenter; text: panel.activeWifi ? panel.activeWifi + " · Bağlı" : "Bağlı Wi-Fi ağı yok"; color: panel.activeWifi ? theme.success : theme.muted; font.pixelSize: 15; font.bold: panel.activeWifi.length > 0; elide: Text.ElideRight }

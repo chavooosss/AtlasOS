@@ -131,7 +131,7 @@ Item {
                 Row {
                     width: parent.width
                     spacing: 10
-                    Controls.ComboBox {
+                    AtlasComboBox {
                         id: targetSelector; width: Math.max(180, Math.min(300, parent.width - 360))
                         model: page.exportTargets; textRole: "device"
                         displayText: currentIndex >= 0 && currentIndex < page.exportTargets.length ? page.exportTargets[currentIndex].device + " · USB · " + Math.round(page.exportTargets[currentIndex].size_bytes / 1073741824 * 10) / 10 + " GB" : "Harici USB bellek bekleniyor"

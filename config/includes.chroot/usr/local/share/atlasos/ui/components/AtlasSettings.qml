@@ -113,7 +113,7 @@ Rectangle {
                                 Text { text: "Görünüm boyutu"; color: theme.ink; font.pixelSize: 18; font.bold: true }
                                 Text { width: parent.width; text: panel.displayMode === "auto" ? (panel.touchscreenDetected ? "Dokunmatik algılandı · Tahta görünümü" : "Dokunmatik algılanmadı · Laptop görünümü") : panel.displayMode === "board" ? "Tahta görünümü seçili" : "Laptop görünümü seçili"; color: theme.muted; font.pixelSize: 14; elide: Text.ElideRight }
                             }
-                            Controls.ComboBox { id: modeSelector; anchors.right: parent.right; anchors.rightMargin: 23; anchors.verticalCenter: parent.verticalCenter; width: 205; height: 56; model: ["Otomatik", "Laptop", "Tahta"]; currentIndex: panel.displayMode === "board" ? 2 : panel.displayMode === "laptop" ? 1 : 0; onActivated: panel.displayModeRequested(index === 2 ? "board" : index === 1 ? "laptop" : "auto") }
+                            AtlasComboBox { id: modeSelector; anchors.right: parent.right; anchors.rightMargin: 23; anchors.verticalCenter: parent.verticalCenter; width: 205; height: 56; model: ["Otomatik", "Laptop", "Tahta"]; currentIndex: panel.displayMode === "board" ? 2 : panel.displayMode === "laptop" ? 1 : 0; onActivated: panel.displayModeRequested(index === 2 ? "board" : index === 1 ? "laptop" : "auto") }
                         }
                         Rectangle { width: parent.width; height: 104; radius: theme.radiusLarge; color: theme.disabledSurface; border.color: theme.borderSubtle
                             Column { x: 24; anchors.verticalCenter: parent.verticalCenter; spacing: 6
@@ -135,7 +135,7 @@ Rectangle {
                                 Text { text: "Atlas açılış sesi"; color: theme.ink; font.pixelSize: 18; font.bold: true }
                                 Text { text: panel.startupSoundAvailable ? "Oturum açıldığında kısa bir ses çalar." : "Ses dosyası bu yapıda bulunmuyor."; color: theme.muted; font.pixelSize: 14 }
                             }
-                            Controls.Switch { anchors.right: parent.right; anchors.rightMargin: 24; anchors.verticalCenter: parent.verticalCenter; visible: panel.startupSoundAvailable; checked: panel.startupSoundEnabled; onClicked: panel.startupSoundChanged(checked) }
+                            AtlasSwitch { anchors.right: parent.right; anchors.rightMargin: 24; anchors.verticalCenter: parent.verticalCenter; visible: panel.startupSoundAvailable; checked: panel.startupSoundEnabled; onToggled: panel.startupSoundChanged(checked) }
                         }
                     }
                     Column { visible: panel.selectedSection === "access"; width: parent.width; spacing: 14

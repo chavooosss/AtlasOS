@@ -61,8 +61,8 @@ Item {
             Rectangle {
                 width: (parent.width - 24) / 3; height: parent.height; radius: theme.radiusLarge; color: theme.disabledSurface; border.color: theme.borderSubtle
                 AtlasIcon { x: 18; y: 19; width: 35; height: 35; name: "bell"; strokeColor: theme.disabledInk }
-                Text { x: 18; y: parent.height - 74; text: "Rahatsız Etme"; color: theme.disabledInk; font.pixelSize: 17; font.bold: true; width: parent.width - 36; elide: Text.ElideRight }
-                Text { x: 18; y: parent.height - 46; width: parent.width - 36; text: "Kullanılamıyor"; color: theme.disabledInk; font.pixelSize: 13; elide: Text.ElideRight }
+                Text { x: 18; y: parent.height - 78; width: parent.width - 36; height: 38; text: "Rahatsız Etme"; color: theme.disabledInk; font.pixelSize: quick.compact ? 15 : 17; font.bold: true; wrapMode: Text.WordWrap; maximumLineCount: 2 }
+                Text { x: 18; y: parent.height - 40; width: parent.width - 36; text: "Kullanılamıyor"; color: theme.disabledInk; font.pixelSize: 13 }
             }
         }
 
@@ -98,8 +98,8 @@ Item {
                 {label: "Ekran Yansıtma", icon: "screen-draw"}
             ]; delegate: Rectangle { required property var modelData; width: (parent.width - 36) / 4; height: parent.height; radius: theme.radiusLarge; color: theme.disabledSurface; border.color: theme.borderSubtle
                 AtlasIcon { x: 15; y: 16; width: 29; height: 29; name: modelData.icon; strokeColor: theme.disabledInk }
-                Text { x: 15; y: parent.height - 54; width: parent.width - 30; text: modelData.label; color: theme.disabledInk; font.pixelSize: 14; font.bold: true; elide: Text.ElideRight }
-                Text { x: 15; y: parent.height - 30; text: "Kullanılamıyor"; color: theme.disabledInk; font.pixelSize: 11 }
+                Text { x: 15; y: parent.height - 60; width: parent.width - 30; height: 34; text: modelData.label; color: theme.disabledInk; font.pixelSize: quick.compact ? 12 : 14; font.bold: true; wrapMode: Text.WordWrap; maximumLineCount: 2 }
+                Text { x: 15; y: parent.height - 25; text: "Kullanılamıyor"; color: theme.disabledInk; font.pixelSize: 11 }
             } }
         }
         Row { width: parent.width; height: quick.compact ? 54 : 60; spacing: 12
