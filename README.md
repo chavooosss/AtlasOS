@@ -1,12 +1,14 @@
 # AtlasOS
 
-**A classroom-focused Linux Live system for interactive boards.** AtlasOS puts lesson tools, device controls, and diagnostics in a dedicated Qt/QML desktop, with a custom UEFI boot frontend.
+**An education-focused Ubuntu-based Linux Live environment for classroom interactive boards.** AtlasOS puts lesson tools, device controls, and diagnostics in a dedicated Qt/QML desktop, with a custom Rust UEFI boot frontend.
 
 ![AtlasOS desktop](docs/media/atlasos-desktop.png)
 
 *Atlas desktop rendered from the current QML interface. The capture uses local test/service state; it is not a hardware compatibility claim.*
 
 **Current status:** 0.6.3 Development Preview. One OVMF/QEMU run reached the Live desktop; the project owner reports one successful UEFI Live test on a Casper Excalibur G870. Physical evidence is limited to that device. **There is no public ISO download.** The public source repository is available at [github.com/chavooosss/AtlasOS](https://github.com/chavooosss/AtlasOS), and the [product website](https://chavooosss.github.io/AtlasOS/) introduces the project.
+
+**Quick links:** [Website](https://chavooosss.github.io/AtlasOS/) · [Download status](https://chavooosss.github.io/AtlasOS/download/) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md) · [Source](https://github.com/chavooosss/AtlasOS) · [License](LICENSE)
 
 ## AtlasOS at a glance
 
