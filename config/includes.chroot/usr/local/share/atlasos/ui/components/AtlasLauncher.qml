@@ -56,7 +56,16 @@ Item {
             Row {
                 width: parent.width; height: 64
                 Text { text: "Uygulamalar"; color: theme.ink; font.pixelSize: 24; font.bold: true; width: parent.width - 64 }
-                Button { width: 64; height: 64; text: "×"; onClicked: launcher.close() }
+                Button {
+                    width: 64; height: 64
+                    contentItem: AtlasIcon {
+                        anchors.centerIn: parent
+                        name: "close"
+                        width: 22; height: 22
+                        strokeColor: theme.ink
+                    }
+                    onClicked: launcher.close()
+                }
             }
             TextField {
                 id: query

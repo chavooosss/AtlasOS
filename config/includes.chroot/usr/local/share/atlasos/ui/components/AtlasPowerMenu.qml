@@ -35,7 +35,7 @@ Controls.Popup {
             }
             Item { width: Math.max(0, parent.width - 62 - 245 - 44 - 48); height: 1 }
             Rectangle { width: 44; height: 44; radius: 10; color: theme.shellRaised
-                Text { anchors.centerIn: parent; text: "×"; color: "white"; font.pixelSize: 27 }
+                AtlasIcon { anchors.centerIn: parent; name: "close"; width: 22; height: 22; strokeColor: "white" }
                 MouseArea { anchors.fill: parent; onClicked: menu.close() }
             }
         }

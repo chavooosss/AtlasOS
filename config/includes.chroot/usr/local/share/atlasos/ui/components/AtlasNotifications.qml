@@ -18,7 +18,7 @@ Rectangle {
             width: parent.width; height: 52; spacing: 8
             Text { width: parent.width - 56; anchors.verticalCenter: parent.verticalCenter; text: "Bildirimler"; color: theme.ink; font.pixelSize: 24; font.bold: true }
             Rectangle { width: 48; height: 48; radius: 11; color: theme.surface
-                Text { anchors.centerIn: parent; text: "×"; color: theme.atlasNavy; font.pixelSize: 29 }
+                AtlasIcon { anchors.centerIn: parent; name: "close"; width: 22; height: 22; strokeColor: theme.atlasNavy }
                 MouseArea { anchors.fill: parent; onClicked: panel.closeRequested() }
             }
         }
