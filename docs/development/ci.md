@@ -1,6 +1,6 @@
 # CI and quality gates
 
-AtlasOS 0.6.2 is a Development Preview / Physical Validation Build. CI checks source quality and repository hygiene; it does not certify hardware compatibility or produce release images.
+AtlasOS 0.6.4 is the current Development Preview source candidate. CI checks source quality and repository hygiene; it does not certify hardware compatibility or produce release images. The 0.6.3 physical validation report remains historical evidence.
 
 ## Tiers
 

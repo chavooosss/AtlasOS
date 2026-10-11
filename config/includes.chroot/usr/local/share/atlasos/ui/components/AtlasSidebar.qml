@@ -57,6 +57,6 @@ Rectangle {
             Text { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 7 * sidebar.itemScale; text: "Kapat"; color: "white"; font.pixelSize: 13 * sidebar.itemScale }
             MouseArea { anchors.fill: parent; onClicked: sidebar.powerRequested() }
         }
-        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "AtlasOS 0.6.3"; color: "#a6bdcf"; font.pixelSize: 10 * sidebar.itemScale }
+        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "AtlasOS 0.6.4"; color: "#a6bdcf"; font.pixelSize: 10 * sidebar.itemScale }
     }
 }

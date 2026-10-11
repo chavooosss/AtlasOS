@@ -14,6 +14,21 @@ This is a selected milestone summary, not a complete reconstruction of AtlasOS d
 - Atlas system interfaces were refreshed with a consistent Atlas visual language, improved touch targets, responsive Quick Settings behavior, and custom Atlas controls.
 - Release and validation documentation now distinguishes the public source repository from the unpublished ISO candidate.
 
+## [0.6.4] - 2026-10-11 — Development Preview / Candidate
+
+### Added
+
+- Added an explicit Google-official Chrome installation path for users who choose it; the proprietary browser binary and Google repository are not included in the ISO package selection.
+
+### Changed
+
+- Bumped current AtlasOS source and About/diagnostics/boot-menu version metadata to 0.6.4 while retaining 0.6.3 physical validation records as historical evidence.
+- The Web Tarayıcısı launcher now prefers installed Google Chrome, opens the AtlasOS website for its default/blank start destination, and offers an opt-in installer when no supported browser is installed.
+
+### Validation
+
+- Source-level browser and distribution policy checks are added for the explicit install path. The 0.6.4 ISO has not yet been built or physically validated.
+
 ## [0.6.3] - 2026-10-05 — Development Preview / Release Candidate
 
 ### Added

@@ -18,6 +18,8 @@ The public source repository does not publish an ISO. AtlasOS 0.6.3 RC remains o
 
 The G4.1 image is an engineering candidate, not a public binary. Source availability and binary redistribution are evaluated separately.
 
+As of the 0.6.4 source-candidate update, no ISO is approved for public download. Chrome remains excluded from the image package selection; optional installation is initiated by the user through Google's official Linux source. The 0.6.4 test ISO is validation-only and will not be uploaded as part of this source change.
+
 ## Third-party and generated assets
 
 Ubuntu/Debian packages, Rust dependencies, fonts, icons, and other upstream components retain their own terms. The owner has recorded project-distribution permission for reviewed Atlas-specific AI-generated visual assets; provider/model terms remain unknown and the project makes no exclusive-copyright claim. The startup WAV, branded design-reference screenshots, and personal/device photos are excluded. See [license scope](../legal/project-license-scope.md), [asset inventory](../legal/asset-inventory.json), and [third-party inventory](../legal/third-party-inventory.md).

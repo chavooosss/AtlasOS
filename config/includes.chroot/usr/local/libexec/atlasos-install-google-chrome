@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${EUID}" -ne 0 ]]; then echo "This helper must be started through the desktop authorization prompt." >&2; exit 77; fi
+for tool in curl dpkg-deb apt-get; do
+  command -v "${tool}" >/dev/null 2>&1 || { echo "Required installer tool is missing: ${tool}" >&2; exit 127; }
+done
+work_dir="$(mktemp -d /var/tmp/atlasos-chrome-install.XXXXXX)"
+trap 'rm -rf -- "${work_dir}"' EXIT
+package_file="${work_dir}/google-chrome-stable_current_amd64.deb"
+package_url="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
+  --connect-timeout 20 --max-time 240 "${package_url}" --output "${package_file}"
+package_name="$(dpkg-deb --field "${package_file}" Package)"
+package_arch="$(dpkg-deb --field "${package_file}" Architecture)"
+package_version="$(dpkg-deb --field "${package_file}" Version)"
+if [[ "${package_name}" != "google-chrome-stable" || "${package_arch}" != "amd64" || ! "${package_version}" =~ ^[0-9][A-Za-z0-9.+:~_-]*$ ]]; then
+  echo "The downloaded file is not the expected stable amd64 Google Chrome package." >&2
+  exit 65
+fi
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${package_file}"
+if [[ ! -x /usr/bin/google-chrome-stable ]]; then echo "Package installation completed without the expected Chrome launcher." >&2; exit 1; fi

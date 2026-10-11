@@ -153,7 +153,7 @@ Rectangle {
                             Image { x: 28; anchors.verticalCenter: parent.verticalCenter; width: 105; height: 105; source: "../branding/atlas-symbol.png"; fillMode: Image.PreserveAspectFit }
                             Column { x: 152; anchors.verticalCenter: parent.verticalCenter; spacing: 8
                                 Text { text: "AtlasOS"; color: theme.ink; font.pixelSize: 29; font.bold: true }
-                                Text { text: "0.6.3 · Live geliştirme önizlemesi"; color: theme.atlasBlue; font.pixelSize: 15 }
+                                Text { text: "0.6.4 · Live geliştirme önizlemesi"; color: theme.atlasBlue; font.pixelSize: 15 }
                                 Text { text: "Geliştirici: Veli Ercan"; color: theme.muted; font.pixelSize: 14 }
                             }
                         }

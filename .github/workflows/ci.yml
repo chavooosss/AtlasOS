@@ -43,9 +43,11 @@ jobs:
       - name: Check shell syntax
         run: |
           mapfile -d '' scripts < <(find iso tests atlas-boot/tools -type f -name '*.sh' -print0)
+          scripts+=(config/includes.chroot/usr/local/bin/atlasos-browser)
+          scripts+=(config/includes.chroot/usr/local/libexec/atlasos-install-google-chrome)
           for script in "${scripts[@]}"; do bash -n "$script"; done
-      - name: ShellCheck build and dispatcher scripts
-        run: shellcheck --severity=warning --exclude=SC2094 iso/build-atlasos.sh iso/check-build-env.sh iso/live-build-dispatch.sh
+      - name: ShellCheck build, dispatcher, and browser scripts
+        run: shellcheck --severity=warning --exclude=SC2094 iso/build-atlasos.sh iso/check-build-env.sh iso/live-build-dispatch.sh config/includes.chroot/usr/local/bin/atlasos-browser config/includes.chroot/usr/local/libexec/atlasos-install-google-chrome
       - name: Safe build preflight (dry run only)
         run: |
           ATLASOS_BUILD_DIR="$PWD/build/ci-preflight-${GITHUB_RUN_ID}" \

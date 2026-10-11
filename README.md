@@ -6,7 +6,7 @@
 
 *Atlas desktop rendered from the current QML interface. The capture uses local test/service state; it is not a hardware compatibility claim.*
 
-**Current status:** 0.6.3 Development Preview. One OVMF/QEMU run reached the Live desktop; the project owner reports one successful UEFI Live test on a Casper Excalibur G870. Physical evidence is limited to that device. **There is no public ISO download.** The public source repository is available at [github.com/chavooosss/AtlasOS](https://github.com/chavooosss/AtlasOS), and the [product website](https://chavooosss.github.io/AtlasOS/) introduces the project.
+**Current source line:** 0.6.4 Development Preview. The 0.6.3 candidate reached the Live desktop in one OVMF/QEMU run; the project owner reports one successful UEFI Live test on a Casper Excalibur G870. This is historical evidence for 0.6.3, not validation of a 0.6.4 ISO. **No public ISO download is available; the 0.6.4 candidate ISO is prepared separately for validation.** The public source repository is available at [github.com/chavooosss/AtlasOS](https://github.com/chavooosss/AtlasOS), and the [product website](https://chavooosss.github.io/AtlasOS/) introduces the project.
 
 **Quick links:** [Website](https://chavooosss.github.io/AtlasOS/) · [Download status](https://chavooosss.github.io/AtlasOS/download/) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md) · [Source](https://github.com/chavooosss/AtlasOS) · [License](LICENSE)
 
@@ -44,6 +44,8 @@ Atlas resource tiles may show names such as EBA, OGM Material, and MEBİ as text
 
 These descriptions summarize implemented interfaces; they do not imply that every device, peripheral, or external service has been validated.
 
+- **External browser:** the image does not bundle Google Chrome. The Web Tarayıcısı launcher uses an installed browser or offers an explicit Google-official install path.
+
 ## Evidence and limitations
 
 | Area | Current evidence |
@@ -55,7 +57,7 @@ These descriptions summarize implemented interfaces; they do not imply that ever
 | Network, audio, display, and touch | Implemented interfaces; behavior depends on device and available system services |
 | Installer and managed provisioning | Not implemented |
 | Official MEB/EBA/OGM/MEBİ integration | Not established; visible entries are local shortcuts/references |
-| Public binary | No ISO download is published; the 0.6.3 RC remains under package-notice and source-obligation review |
+| Public binary | No ISO download is published. The 0.6.3 RC remains historical; 0.6.4 is a source candidate pending its clean test build and validation |
 
 See [project status](docs/project/status.md), [validation records](docs/testing/README.md), and the [release status](docs/release/README.md) for evidence boundaries.
 
@@ -77,4 +79,4 @@ AtlasOS development predates its public Git baseline. The initial commit is a cu
 
 ## Türkçe kısa özet
 
-AtlasOS, sınıf içi etkileşimli tahta kullanımına odaklanan Ubuntu tabanlı bir Live Linux ortamıdır. Qt/QML masaüstü, ders araçları, sistem kontrolleri, tanılama arayüzü ve özel UEFI açılış arayüzü içerir. Proje 0.6.3 Geliştirme Önizlemesi aşamasındadır; geniş donanım uyumluluğu doğrulanmamıştır ve henüz herkese açık ISO indirmesi bulunmamaktadır.
+AtlasOS, sınıf içi etkileşimli tahta kullanımına odaklanan Ubuntu tabanlı bir Live Linux ortamıdır. Qt/QML masaüstü, ders araçları, sistem kontrolleri, tanılama arayüzü ve özel UEFI açılış arayüzü içerir. Proje 0.6.4 Geliştirme Önizlemesi kaynak hattındadır; geniş donanım uyumluluğu doğrulanmamıştır ve henüz herkese açık ISO indirmesi bulunmamaktadır.

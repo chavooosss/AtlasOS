@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-url="${1:-about:blank}"
+ATLAS_HOME_URL="https://chavooosss.github.io/AtlasOS/"
+url="${1:-${ATLAS_HOME_URL}}"
+if [[ -z "${url}" || "${url}" == "about:blank" ]]; then
+  url="${ATLAS_HOME_URL}"
+fi
+
 log_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/atlasos"
 mkdir -p "${log_dir}"
 log="${log_dir}/browser.log"
@@ -9,13 +14,15 @@ log="${log_dir}/browser.log"
 show_error() {
   printf '%s\n' "$1" >>"${log}"
   if command -v zenity >/dev/null 2>&1; then
-    zenity --error --title="AtlasOS" --text="$(printf '%s\n\nAyrintilar: %s' "$1" "$log")" >/dev/null 2>&1 || true
+    zenity --error --title="AtlasOS" \
+      --text="$(printf '%s\n\nAyrintilar: %s' "$1" "${log}")" \
+      >/dev/null 2>&1 || true
   fi
   printf '%s (ayrintilar: %s)\n' "$1" "${log}" >&2
 }
 
 browser=""
-for candidate in chromium chromium-browser firefox; do
+for candidate in google-chrome-stable google-chrome chromium chromium-browser firefox; do
   if command -v "${candidate}" >/dev/null 2>&1; then
     browser="$(command -v "${candidate}")"
     break
@@ -31,11 +38,42 @@ done
 } >>"${log}" 2>&1
 
 if [[ -z "${browser}" ]]; then
-  show_error "Harici web tarayıcısı yüklü değil. AtlasOS içi web görünümünü kullanabilirsiniz."
-  exit 127
+  if ! command -v zenity >/dev/null 2>&1; then
+    show_error "Harici web tarayıcısı yüklü değil. AtlasOS içi web görünümünü kullanabilirsiniz."
+    exit 127
+  fi
+  if ! command -v pkexec >/dev/null 2>&1; then
+    show_error "Chrome bu Live sistemde yüklü değil ve güvenli kurulum aracı bulunamadı. AtlasOS içi web görünümünü kullanabilirsiniz."
+    exit 127
+  fi
+
+  if zenity --question \
+    --title="AtlasOS · Google Chrome" \
+    --width=560 \
+    --ok-label="Şartları inceledim · indir" \
+    --cancel-label="Vazgeç" \
+    --text="Google Chrome AtlasOS'a dahil edilmez. İstersen resmi Google Linux paketini indirip kurabilirsin.\n\nİndirmeden önce Google koşullarını incele:\nhttps://policies.google.com/terms\nhttps://www.google.com/chrome/terms/\n\nDevam düğmesi, Google'ın indirme koşulları kapsamında paketi istemen anlamına gelir. Chrome ilk açılışında gösterilen koşulları AtlasOS senin adına kabul etmez. Kurulum ayrıca Google'ın resmi güncelleme deposunu etkinleştirir."; then
+    if ! pkexec /usr/local/libexec/atlasos-install-google-chrome; then
+      show_error "Google Chrome kurulamadı. Ağ bağlantısını ve yönetici yetkisini kontrol edip yeniden deneyin."
+      exit 1
+    fi
+  else
+    exit 0
+  fi
+
+  for candidate in google-chrome-stable google-chrome chromium chromium-browser firefox; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      browser="$(command -v "${candidate}")"
+      break
+    fi
+  done
+  if [[ -z "${browser}" ]]; then
+    show_error "Kurulum tamamlandı ancak başlatılabilir tarayıcı bulunamadı."
+    exit 127
+  fi
 fi
 
-# Serialize rapid duplicate requests; retry one transient SIGKILL/137 exit.
+# Serialize duplicate launch requests and retry one transient SIGKILL/137 exit.
 exec 9>"${log_dir}/browser-launch.lock"
 if ! flock -w 20 9; then
   show_error "Web tarayıcısı başlatılıyor. Birkaç saniye sonra yeniden deneyin."
@@ -43,7 +81,7 @@ if ! flock -w 20 9; then
 fi
 
 for attempt in 1 2; do
-  if "${browser}" "${url}" >>"${log}" 2>&1; then
+  if "${browser}" --new-window "${url}" >>"${log}" 2>&1; then
     exit 0
   else
     status=$?

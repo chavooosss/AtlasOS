@@ -16,17 +16,18 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(manifest["artifact"]["size_bytes"], 3_471_966_208)
         self.assertRegex(manifest["artifact"]["sha256"], re.compile(r"^[0-9a-f]{64}$"))
 
-    def test_current_rc_manifest_matches_canonical_version_and_identity(self):
+    def test_063_rc_manifest_remains_historical_after_version_bump(self):
         manifest = json.loads((ROOT / "docs/release/release-manifest-0.6.3-rc1.json").read_text(encoding="utf-8"))
         version = (ROOT / "VERSION").read_text(encoding="ascii").strip()
-        self.assertEqual(manifest["version"], version)
+        self.assertEqual(version, "0.6.4")
+        self.assertEqual(manifest["version"], "0.6.3")
         self.assertEqual(manifest["maturity"], "Development Preview / Release Candidate")
-        self.assertEqual(manifest["artifact"]["filename"], f"AtlasOS-{version}-rc1-live-amd64.iso")
+        self.assertEqual(manifest["artifact"]["filename"], "AtlasOS-0.6.3-rc1-live-amd64.iso")
         self.assertEqual(manifest["artifact"]["size_bytes"], 3_273_064_448)
-        self.assertRegex(manifest["artifact"]["sha256"], re.compile(r"^[0-9a-f]{64}$"))
-        self.assertEqual(manifest["artifact"]["publication_status"], "not published")
-        self.assertIn("pending", manifest["distribution_review"]["package_inventory"]["package_level_notices_and_corresponding_source_review"])
-
+        self.assertEqual(manifest["artifact"]["sha256"], "0a044347d556493ea62e3767f22e4cba796962988b9be9a4ee156ad7c96b4233")
+        notes = (ROOT / "docs/release/release-notes-0.6.4.md").read_text(encoding="utf-8")
+        self.assertIn("0.6.4 test ISO is intended to be prepared separately", notes)
+        self.assertIn("0.6.4 still requires a fresh build and hardware testing.", notes)
     def test_manifest_keeps_validation_and_provenance_boundaries_explicit(self):
         manifest = json.loads((ROOT / "docs/release/release-manifest-0.6.2.json").read_text(encoding="utf-8"))
         self.assertIn("user-reported", manifest["validation"]["physical"])
