@@ -3,10 +3,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from tools.ci.check_repo import check_file_policy
+from tools.ci.check_repo import check_chrome_privilege_policy, check_file_policy
 
 
 class RepositoryPolicyTests(unittest.TestCase):
+    def test_chrome_privilege_policy_remains_narrow_and_live_only(self):
+        errors = []
+        check_chrome_privilege_policy(errors)
+        self.assertEqual(errors, [])
+
     def test_generated_and_release_artifact_paths_are_rejected(self):
         errors = []
         check_file_policy(["dist/candidate.iso", "atlas-boot/target/release/App.efi"], errors)

@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -245,7 +246,11 @@ def check_future_browser_policy(errors: list[str]) -> None:
         if not path.is_file():
             fail(f"active future-build browser policy file is missing: {relative}", errors)
             continue
-        if forbidden.search(path.read_text(encoding="utf-8", errors="replace")):
+        content = path.read_text(encoding="utf-8", errors="replace")
+        if relative == "config/hooks/normal/010-atlasos-branding.hook.chroot":
+            content = content.replace("atlasos-install-google-chrome", "atlasos-install-browser-helper")
+            content = content.replace("org.atlasos.install-google-chrome", "org.atlasos.install-browser-helper")
+        if forbidden.search(content):
             fail(f"Chrome vendor package/repository reference found in image build configuration: {relative}", errors)
 
     launcher_path = ROOT / "config/includes.chroot/usr/local/bin/atlasos-browser"
@@ -261,9 +266,51 @@ def check_future_browser_policy(errors: list[str]) -> None:
         fail("Chrome installation must remain an explicit user-authorized action", errors)
     if "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" not in installer:
         fail("Chrome installer must use Google's official stable amd64 package endpoint", errors)
-    if "dpkg-deb --field" not in installer or '"${package_name}" != "google-chrome-stable"' not in installer or '"${package_arch}" != "amd64"' not in installer:
+    if ('"$DPKG_DEB" --field "$package_file" Package' not in installer
+        or '"$package_name" != google-chrome-stable' not in installer
+        or '"$package_arch" != amd64' not in installer
+        or '"$package_version" =~ ^[0-9]' not in installer):
         fail("Chrome installer must validate package identity and architecture before installation", errors)
 
+def check_chrome_privilege_policy(errors: list[str]) -> None:
+    policy_path = ROOT / "config/includes.chroot/usr/share/polkit-1/actions/org.atlasos.install-google-chrome.policy"
+    rule_path = ROOT / "config/includes.chroot/etc/polkit-1/rules.d/49-atlasos-live-chrome.rules"
+    helper_path = ROOT / "config/includes.chroot/usr/local/libexec/atlasos-install-google-chrome"
+    try:
+        action = ET.parse(policy_path).getroot().find("./action[@id='org.atlasos.install-google-chrome']")
+    except (ET.ParseError, OSError) as error:
+        fail(f"Chrome Polkit action is missing or invalid: {error}", errors)
+        return
+    if action is None:
+        fail("dedicated Chrome Polkit action is missing", errors)
+        return
+    annotations = {node.attrib.get("key"): node.text for node in action.findall("annotate")}
+    if annotations.get("org.freedesktop.policykit.exec.path") != "/usr/local/libexec/atlasos-install-google-chrome":
+        fail("Chrome Polkit action is not bound to the exact installer path", errors)
+    defaults = action.find("defaults")
+    if defaults is None or [defaults.findtext(name) for name in ("allow_any", "allow_inactive", "allow_active")] != ["no", "auth_admin", "auth_admin"]:
+        fail("Chrome Polkit defaults must remain conservative", errors)
+    try:
+        rule = rule_path.read_text(encoding="utf-8")
+        helper = helper_path.read_text(encoding="utf-8")
+    except OSError as error:
+        fail(f"Chrome Polkit rule or helper is missing: {error}", errors)
+        return
+    for required in (
+        'action.id !== "org.atlasos.install-google-chrome"',
+        'subject.user !== "atlas"',
+        "subject.active !== true",
+        "subject.local !== true",
+        "boot=casper",
+        '"/rofs"',
+        '"squashfs"',
+    ):
+        if required not in rule:
+            fail(f"Chrome Polkit rule is missing a required scope/live check: {required}", errors)
+    if 'mount_options[@]' not in helper or '[[ "$option" == ro ]]' not in helper or "if (( $# != 0 ))" not in helper or "if (( EUID != 0 ))" not in helper:
+        fail("Chrome privileged helper is missing argument, root, or read-only Casper checks", errors)
+    if "NOPASSWD: ALL" in helper:
+        fail("Chrome helper must not introduce broad passwordless sudo", errors)
 
 def check_public_docs(errors: list[str]) -> None:
     link_pattern = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
@@ -308,6 +355,7 @@ def main() -> int:
     source_files = check_manifest_and_version(errors)
     check_public_docs(errors)
     check_future_browser_policy(errors)
+    check_chrome_privilege_policy(errors)
     files = git_index_files()
     if files is None:
         if not args.source_tree:
