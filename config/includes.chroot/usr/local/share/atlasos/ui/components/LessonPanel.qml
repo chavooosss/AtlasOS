@@ -46,17 +46,17 @@ Rectangle {
     Timer { interval: 30000; running: true; repeat: true; onTriggered: panel.currentTime = new Date() }
 
     Column {
-        id: panelContent
-        anchors.fill: parent
-        anchors.margins: 19 * panel.scaleFactor
-        spacing: 12 * panel.scaleFactor
+        id: panelHeader
+        anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+        anchors.leftMargin: 19 * panel.scaleFactor; anchors.rightMargin: 19 * panel.scaleFactor; anchors.topMargin: 19 * panel.scaleFactor
+        spacing: 10 * panel.scaleFactor
 
         Item {
             width: parent.width
             height: 32 * panel.scaleFactor
             AtlasIcon { x: 0; anchors.verticalCenter: parent.verticalCenter; width: 24 * panel.scaleFactor; height: 24 * panel.scaleFactor; name: "calendar"; strokeColor: theme.navy }
             Text { anchors.left: parent.left; anchors.leftMargin: 32 * panel.scaleFactor; anchors.verticalCenter: parent.verticalCenter; text: "Bugünkü Ders"; font.pixelSize: 20 * panel.scaleFactor; font.bold: true; color: theme.ink }
-            Text { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: "Tümünü Gör  →"; color: theme.blue; font.pixelSize: 13 * panel.scaleFactor; visible: panelContent.width >= 350 * panel.scaleFactor }
+            Text { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: "Tümünü Gör  →"; color: theme.blue; font.pixelSize: 13 * panel.scaleFactor; visible: panelHeader.width >= 350 * panel.scaleFactor }
             MouseArea { anchors.fill: parent; onClicked: scheduleDialog.open() }
         }
 
@@ -68,28 +68,85 @@ Rectangle {
             color: "#fff5df"
             Text { anchors.centerIn: parent; text: (panel.demo ? "ÖRNEK PROGRAM  ·  " : "SINIF PROGRAMI  ·  ") + panel.classLabel + (panel.scheduleDay.length > 0 ? "  ·  " + panel.scheduleDay : ""); color: "#835810"; font.pixelSize: 12 * panel.scaleFactor; font.bold: true; elide: Text.ElideRight; width: parent.width - 16 * panel.scaleFactor; horizontalAlignment: Text.AlignHCenter }
         }
+    }
 
-        Text {
-            visible: panel.lessons.length === 0
+    Column {
+        id: actionStack
+        anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+        anchors.leftMargin: 19 * panel.scaleFactor; anchors.rightMargin: 19 * panel.scaleFactor; anchors.bottomMargin: 18 * panel.scaleFactor
+        spacing: 10 * panel.scaleFactor
+
+        Rectangle {
+            visible: panel.lessonToStart() !== null
             width: parent.width
-            text: panel.scheduleDay === "Hafta sonu" ? "Bugün ders yok" : "Henüz ders programı ayarlanmadı"
-            color: theme.muted
-            font.pixelSize: 14 * panel.scaleFactor
-            wrapMode: Text.WordWrap
+            height: visible ? 54 * panel.scaleFactor : 0
+            radius: 10 * panel.scaleFactor
+            color: theme.navy
+            Text { anchors.centerIn: parent; text: "Derse Başla  →"; color: "white"; font.pixelSize: 16 * panel.scaleFactor; font.bold: true }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    var lesson = panel.lessonToStart()
+                    if (lesson) panel.startRequested(lesson.title, lesson.start, lesson.end)
+                }
+            }
         }
+
+        Rectangle {
+            width: parent.width
+            height: 56 * panel.scaleFactor
+            radius: 10 * panel.scaleFactor
+            color: theme.red
+            Row {
+                anchors.centerIn: parent
+                spacing: 10 * panel.scaleFactor
+                Rectangle { width: 19 * panel.scaleFactor; height: 19 * panel.scaleFactor; radius: 3 * panel.scaleFactor; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "Dersi Bitir"; color: "white"; font.pixelSize: 17 * panel.scaleFactor; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+            }
+            MouseArea { anchors.fill: parent; onClicked: panel.finishRequested() }
+        }
+    }
+
+    Rectangle {
+        id: mottoCard
+        visible: panel.height >= 690 * panel.scaleFactor && panel.width >= 340 * panel.scaleFactor
+        anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: actionStack.top
+        anchors.leftMargin: 19 * panel.scaleFactor; anchors.rightMargin: 19 * panel.scaleFactor; anchors.bottomMargin: 12 * panel.scaleFactor
+        height: 112 * panel.scaleFactor
+        radius: 10 * panel.scaleFactor
+        color: "#edf5fc"
+        AtlasIcon { x: 20 * panel.scaleFactor; anchors.verticalCenter: parent.verticalCenter; width: 48 * panel.scaleFactor; height: 48 * panel.scaleFactor; name: "bulb"; strokeColor: theme.blue }
+        Column {
+            anchors.left: parent.left; anchors.leftMargin: 84 * panel.scaleFactor
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 5 * panel.scaleFactor
+            Text { width: mottoCard.width - 100 * panel.scaleFactor; text: "Merak eden, araştıran, üreten nesiller için."; color: theme.navy; font.pixelSize: 15 * panel.scaleFactor; font.italic: true; wrapMode: Text.WordWrap; maximumLineCount: 2 }
+            Text { text: "— AtlasOS"; color: theme.blue; font.pixelSize: 13 * panel.scaleFactor }
+        }
+    }
+
+    Item {
+        id: scheduleArea
+        anchors.left: parent.left; anchors.right: parent.right
+        anchors.top: panelHeader.bottom; anchors.bottom: mottoCard.visible ? mottoCard.top : actionStack.top
+        anchors.leftMargin: 19 * panel.scaleFactor; anchors.rightMargin: 19 * panel.scaleFactor
+        anchors.topMargin: 12 * panel.scaleFactor; anchors.bottomMargin: 12 * panel.scaleFactor
+        clip: true
 
         Flickable {
             id: scheduleList
-            width: parent.width
-            height: Math.max(112 * panel.scaleFactor, Math.min(scheduleColumn.implicitHeight, parent.height - (32 + (panel.demo ? 29 : 0) + 56 + (mottoCard.visible ? 112 : 0) + 60) * panel.scaleFactor))
+            anchors.fill: parent
+            visible: panel.lessons.length > 0
             contentWidth: width
             contentHeight: scheduleColumn.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.VerticalFlick
+            Controls.ScrollBar.vertical: Controls.ScrollBar { policy: Controls.ScrollBar.AsNeeded }
 
             Column {
                 id: scheduleColumn
-                width: parent.width
+                width: scheduleList.width
                 spacing: 7 * panel.scaleFactor
                 Repeater {
                     model: panel.lessons
@@ -137,49 +194,22 @@ Rectangle {
         }
 
         Rectangle {
-            visible: panel.lessonToStart() !== null
-            width: parent.width
-            height: visible ? 54 * panel.scaleFactor : 0
-            radius: 10 * panel.scaleFactor
-            color: theme.navy
-            Text { anchors.centerIn: parent; text: "Derse Başla  →"; color: "white"; font.pixelSize: 16 * panel.scaleFactor; font.bold: true }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    var lesson = panel.lessonToStart()
-                    if (lesson) panel.startRequested(lesson.title, lesson.start, lesson.end)
-                }
-            }
-        }
-
-        Rectangle {
-            width: parent.width
-            height: 56 * panel.scaleFactor
-            radius: 10 * panel.scaleFactor
-            color: theme.red
-            Row {
-                anchors.centerIn: parent
-                spacing: 10 * panel.scaleFactor
-                Rectangle { width: 19 * panel.scaleFactor; height: 19 * panel.scaleFactor; radius: 3 * panel.scaleFactor; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: "Dersi Bitir"; color: "white"; font.pixelSize: 17 * panel.scaleFactor; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
-            }
-            MouseArea { anchors.fill: parent; onClicked: panel.finishRequested() }
-        }
-
-        Rectangle {
-            id: mottoCard
-            visible: panel.height >= 690 * panel.scaleFactor && panel.width >= 340 * panel.scaleFactor
-            width: parent.width
-            height: 112 * panel.scaleFactor
-            radius: 10 * panel.scaleFactor
-            color: "#edf5fc"
-            AtlasIcon { x: 20 * panel.scaleFactor; anchors.verticalCenter: parent.verticalCenter; width: 48 * panel.scaleFactor; height: 48 * panel.scaleFactor; name: "bulb"; strokeColor: theme.blue }
+            id: emptyState
+            visible: panel.lessons.length === 0
+            width: Math.max(0, parent.width - 20 * panel.scaleFactor)
+            height: Math.min(146 * panel.scaleFactor, parent.height * 0.55)
+            anchors.centerIn: parent
+            radius: 14 * panel.scaleFactor
+            color: "#f4f8fc"
+            border.color: theme.line
+            AtlasIcon { anchors.left: parent.left; anchors.leftMargin: 20 * panel.scaleFactor; anchors.verticalCenter: parent.verticalCenter; width: 42 * panel.scaleFactor; height: 42 * panel.scaleFactor; name: "calendar"; strokeColor: theme.blue }
             Column {
-                anchors.left: parent.left; anchors.leftMargin: 84 * panel.scaleFactor
+                anchors.left: parent.left; anchors.leftMargin: 76 * panel.scaleFactor
+                anchors.right: parent.right; anchors.rightMargin: 16 * panel.scaleFactor
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 5 * panel.scaleFactor
-                Text { width: panelContent.width - 100 * panel.scaleFactor; text: "Merak eden, araştıran, üreten nesiller için."; color: theme.navy; font.pixelSize: 15 * panel.scaleFactor; font.italic: true; wrapMode: Text.WordWrap; maximumLineCount: 2 }
-                Text { text: "— AtlasOS"; color: theme.blue; font.pixelSize: 13 * panel.scaleFactor }
+                spacing: 6 * panel.scaleFactor
+                Text { width: parent.width; text: panel.scheduleDay === "Hafta sonu" ? "Bugün planlanmış ders bulunmuyor." : "Henüz ders programı ayarlanmadı."; color: theme.ink; font.pixelSize: 16 * panel.scaleFactor; font.bold: true; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+                Text { width: parent.width; text: "Ders programı burada görüntülenir."; color: theme.muted; font.pixelSize: 13 * panel.scaleFactor; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
             }
         }
     }

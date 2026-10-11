@@ -221,15 +221,23 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn("anchors.rightMargin: 0", dashboard)
         self.assertIn("MEB Kaynakları", dashboard)
         self.assertIn("Ekrana Çiz", dashboard)
-        self.assertIn("width >= 850", dashboard)
+        self.assertIn("width >= (dashboard.boardMode ? 680 : 850)", dashboard)
         self.assertIn("AtlasHomeDashboard {", main_source)
         self.assertNotIn("QT_SCALE_FACTOR=1.25", (UI_PATH.parents[1] / "bin/atlasos-session").read_text(encoding="utf-8"))
         self.assertIn('atlasPreferences.displayMode === "board"', main_source)
-        self.assertIn("root.width < 1440 ? 1.0 : 1.08", main_source)
+        self.assertIn("root.width < 1440 ? 1.10 : 1.25", main_source)
         self.assertIn("anchors.bottom: footer.top", (UI_PATH.parents[1] / "share/atlasos/ui/components/AtlasSidebar.qml").read_text(encoding="utf-8"))
         self.assertIn("touchscreenDetected", main_source)
         self.assertIn('Qt.locale("tr_TR")', header_source)
         self.assertNotIn('text: "İnternet Bağlı"', header_source)
+        card_source = (ui_dir / "components/AtlasCard.qml").read_text(encoding="utf-8")
+        lesson_panel = (ui_dir / "components/LessonPanel.qml").read_text(encoding="utf-8")
+        self.assertIn("wrapMode: Text.WordWrap; maximumLineCount: 2", card_source)
+        self.assertIn('columns: resourcesArea.wide && width >= (dashboard.boardMode ? 560 : 610)', dashboard)
+        self.assertIn('anchors.bottom: mottoCard.visible ? mottoCard.top : actionStack.top', lesson_panel)
+        self.assertIn('Controls.ScrollBar.vertical: Controls.ScrollBar', lesson_panel)
+        self.assertIn('Bugün planlanmış ders bulunmuyor.', lesson_panel)
+        self.assertIn('MouseArea { anchors.fill: parent; onClicked: panel.finishRequested() }', lesson_panel)
 
     def test_062_iso_uses_canonical_version_console_backend_and_checksum_order(self):
         build = pathlib.Path(__file__).resolve().parents[1] / "iso/build-atlasos.sh"
@@ -346,7 +354,7 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn('"atlasos-app-launcher"', (root / "config/includes.chroot/usr/local/bin/atlasos-ui").read_text(encoding="utf-8"))
         self.assertIn('atlasApps.setFavorite(modelData.key, enabled)', dashboard)
         self.assertIn('workspaceTitle = "Kaynak Rafı"', main)
-        self.assertIn('placeholderText: "Bu klasörde kaynak ara"', files)
+        self.assertIn('placeholderText: "Bu klasörde ara…"', files)
         self.assertIn("fileName.toLocaleLowerCase().indexOf(files.searchText)", files)
 
     def test_network_notifications_are_suppressed_before_nm_applet_starts(self):

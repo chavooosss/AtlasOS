@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as Controls
 import "../theme"
 
 Item {
@@ -38,6 +39,7 @@ Item {
         contentHeight: contentColumn.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        Controls.ScrollBar.vertical: Controls.ScrollBar { policy: Controls.ScrollBar.AsNeeded }
         z: 1
 
         Column {
@@ -155,7 +157,10 @@ Item {
                     }
                     Grid {
                         width: parent.width
-                        columns: resourcesArea.wide ? 2 : (width < 610 * dashboard.scaleFactor ? 1 : 2)
+                        // Keep MEB resource cards comfortably wide on compact
+                        // smartboard work areas; the dashboard Flickable handles
+                        // the additional row without clipping the cards.
+                        columns: resourcesArea.wide && width >= (dashboard.boardMode ? 560 : 610) * dashboard.scaleFactor ? 2 : 1
                         spacing: 10 * dashboard.scaleFactor
                         AtlasCard {
                             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns

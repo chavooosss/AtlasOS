@@ -19,7 +19,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: footer.top
-        anchors.bottomMargin: 12 * sidebar.itemScale
+        anchors.bottomMargin: 20 * sidebar.itemScale
         anchors.topMargin: 15 * sidebar.itemScale
         anchors.leftMargin: 8 * sidebar.itemScale
         anchors.rightMargin: 8 * sidebar.itemScale
@@ -49,10 +49,10 @@ Rectangle {
         id: footer
         anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
         anchors.margins: 10 * sidebar.itemScale; spacing: 9 * sidebar.itemScale
-        height: 1 + 107 * sidebar.itemScale
+        height: 1 + 110 * sidebar.itemScale
         Rectangle { width: parent.width; height: 1; color: "#44637d" }
         Rectangle {
-            width: parent.width; height: 66 * sidebar.itemScale; radius: 10; color: "transparent"
+            width: parent.width; height: 68 * sidebar.itemScale; radius: 10; color: "transparent"
             AtlasIcon { id: powerIcon; anchors.horizontalCenter: parent.horizontalCenter; y: 8 * sidebar.itemScale; width: 25 * sidebar.itemScale; height: 25 * sidebar.itemScale; name: "power" }
             Text { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 7 * sidebar.itemScale; text: "Kapat"; color: "white"; font.pixelSize: 13 * sidebar.itemScale }
             MouseArea { anchors.fill: parent; onClicked: sidebar.powerRequested() }
