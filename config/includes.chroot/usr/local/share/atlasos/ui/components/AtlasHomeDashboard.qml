@@ -76,7 +76,7 @@ Item {
                 width: parent.width
                 property bool wide: width >= (dashboard.boardMode ? 680 : 850) * dashboard.scaleFactor
                 property real groupGap: 20 * dashboard.scaleFactor
-                property real booksWidth: wide ? (width - groupGap) * (dashboard.boardMode ? (width < 1000 ? 0.34 : 0.36) : 0.40) : width
+                property real booksWidth: wide ? (width - groupGap) * (dashboard.boardMode ? (width < 1000 ? 0.42 : 0.36) : 0.40) : width
                 property real mebWidth: wide ? width - groupGap - booksWidth : width
                 height: wide ? Math.max(booksGroup.implicitHeight, mebGroup.implicitHeight) : booksGroup.implicitHeight + groupGap + mebGroup.implicitHeight
                 visible: dashboard.page === "home" || dashboard.page === "books"
@@ -200,7 +200,7 @@ Item {
                 Grid {
                     id: toolsGrid
                     width: parent.width
-                    columns: width < (dashboard.boardMode ? 680 : 720) * dashboard.scaleFactor ? 2 : 3
+                    columns: width < (dashboard.boardMode ? 760 : 720) * dashboard.scaleFactor ? 2 : 3
                     spacing: (dashboard.compactLayout ? 8 : 12) * dashboard.scaleFactor
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns

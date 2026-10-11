@@ -233,6 +233,8 @@ class ShellComponentsTests(unittest.TestCase):
         card_source = (ui_dir / "components/AtlasCard.qml").read_text(encoding="utf-8")
         lesson_panel = (ui_dir / "components/LessonPanel.qml").read_text(encoding="utf-8")
         self.assertIn("wrapMode: Text.WordWrap; maximumLineCount: 2", card_source)
+        self.assertIn("width < 1000 ? 0.42 : 0.36", dashboard)
+        self.assertIn("dashboard.boardMode ? 760 : 720", dashboard)
         self.assertIn('columns: resourcesArea.wide && width >= (dashboard.boardMode ? 560 : 610)', dashboard)
         self.assertIn('anchors.bottom: mottoCard.visible ? mottoCard.top : actionStack.top', lesson_panel)
         self.assertIn('Controls.ScrollBar.vertical: Controls.ScrollBar', lesson_panel)
