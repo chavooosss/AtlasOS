@@ -1,13 +1,14 @@
 # AtlasOS project status
 
-## Current candidate: 0.6.3
+## Current source line: 0.6.4
 
-The source version is `0.6.3`. A clean Release Candidate has passed one normal OVMF/QEMU boot to the Live desktop and one owner-reported physical UEFI Live test on a Casper Excalibur G870. The physical evidence is limited to one device and is not independently reproduced here. This candidate is distinct from the protected historical 0.6.2 artifacts below.
+The root `VERSION` file is now `0.6.4`. This is a Development Preview source candidate carrying forward the 0.6.3 UI/boot work and adding the user-triggered official external-browser installation path. The 0.6.4 ISO is not yet built or validated in this source state, and there is no public 0.6.4 binary download, tag, or GitHub Release.
+
+The project owner reports one successful UEFI Live USB test on a Casper Excalibur G870 for the exact 0.6.3 RC1 image. That physical result and the prior 0.6.3 OVMF/QEMU boot are historical evidence for 0.6.3 only; they do not validate a 0.6.4 build. See the [0.6.3 artifact-bound record](../validation/physical-0.6.3-rc1.md).
 
 ## Public project status
 
-The AtlasOS source repository and product website are public. The public repository is a curated source baseline; its initial commit does not reconstruct pre-Git development history. There is no public ISO download. Binary distribution remains on hold for exact-image package notices, archive component attribution, and applicable source-obligation review. See the [publication record](publication-record.md) and [release status](../release/README.md).
-
+The AtlasOS source repository and product website are public. The repository is a curated source baseline; its initial commit does not reconstruct pre-Git development history. No ISO download is published. The historical 0.6.3 binary remains on its recorded package notice, archive component, and source-obligation review hold. The new 0.6.4 candidate requires its own clean build and validation. See the [publication record](publication-record.md) and [release status](../release/README.md).
 ## Historical 0.6.2 status
 
 AtlasOS 0.6.2 is a **Development Preview / Physical Validation Build**. The physical result in this document is user-reported; this documentation work did not independently reproduce it.
@@ -64,4 +65,4 @@ For build, test, publication, and licensing boundaries, see the [documentation i
 
 ## Release rights and ISO integrity gate
 
-AtlasOS-owned source is covered by root MIT within the documented scope; `atlas-boot` retains its separate `MIT OR Apache-2.0` declaration. Upstream packages, fonts, and icons keep their own terms. The project owner has recorded permission for reviewed Atlas-specific AI-generated logo, UI, boot, and Plymouth artwork; provider/model terms remain unknown and no exclusive-copyright claim is made. The UI concept and branded reference screenshots, startup WAV, and personal/device photos remain excluded. Binary distribution of the 0.6.3 RC remains on hold pending exact-image package notices, archive component attribution, and applicable source-obligation review. The historical 0.6.2 ISO is not a public binary candidate. See [AI asset policy](../legal/ai-generated-assets.md), [asset provenance record](../legal/asset-provenance-attestation.md), [asset inventory](../legal/asset-inventory.json), [package policy](../legal/package-distribution-policy.md), the [historical 0.6.2 matrix](../release/release-readiness-matrix.md), and the [G7 decision record](../release/decisions/0004-g7-publication-review.md).
+AtlasOS-owned source is covered by root MIT within the documented scope; `atlas-boot` retains its separate `MIT OR Apache-2.0` declaration. Upstream packages, fonts, and icons keep their own terms. The project owner has recorded permission for reviewed Atlas-specific AI-generated logo, UI, boot, and Plymouth artwork; provider/model terms remain unknown and no exclusive-copyright claim is made. The UI concept and branded reference screenshots, startup WAV, and personal/device photos remain excluded. The 0.6.3 RC binary remains historically held pending exact-image package notices, archive component attribution, and applicable source-obligation review; this does not approve or publish a 0.6.4 binary. The historical 0.6.2 ISO is not a public binary candidate. See [AI asset policy](../legal/ai-generated-assets.md), [asset provenance record](../legal/asset-provenance-attestation.md), [asset inventory](../legal/asset-inventory.json), [package policy](../legal/package-distribution-policy.md), the [historical 0.6.2 matrix](../release/release-readiness-matrix.md), and the [G7 decision record](../release/decisions/0004-g7-publication-review.md).

@@ -309,7 +309,9 @@ class ShellComponentsTests(unittest.TestCase):
         diagnostics = diagnostics_path.read_text(encoding="utf-8")
         self.assertTrue(developer_path.is_file())
         self.assertTrue(diagnostics_path.is_file())
-        self.assertIn('{ key: "developer", label: "Geliştirici" }', settings)
+        settings_nav = (ui_dir / "components/AtlasSettingsNav.qml").read_text(encoding="utf-8")
+        self.assertIn('selectedSection === "developer"', settings)
+        self.assertIn('{key: "developer", label: "Geliştirici"', settings_nav)
         self.assertIn('source: "AtlasDeveloper.qml"', settings)
         self.assertIn('active: panel.selectedSection === "developer"', settings)
         self.assertIn('"Boot Tanılama · Atlas Servisleri · Günlükler"', developer)
@@ -398,7 +400,7 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn('Qt.resolvedUrl("sounds/atlasos-startup.wav")', main_source)
         self.assertIn('root.showToast("Ders tamamlandı", doneMessage)', main_source)
         self.assertIn('"Erişilebilirlik"', settings_source)
-        self.assertIn('"Veli Ercan"', settings_source)
+        self.assertIn('Geliştirici: Veli Ercan', settings_source)
         self.assertIn("startupSoundChanged(bool enabled)", settings_source)
 
     def test_tracked_logos_drive_interface_and_boot_themes(self):
@@ -499,16 +501,18 @@ class ShellComponentsTests(unittest.TestCase):
         network._wired_finished(0, None)
         self.assertEqual(network.wired["connectivity"], "full")
 
-    def test_network_panel_labels_system_connectivity_separately_from_ethernet(self):
+    def test_network_panel_distinguishes_active_connection_from_ethernet_link(self):
         ui_dir = UI_PATH.parents[1] / "share/atlasos/ui"
         network = (ui_dir / "components/AtlasNetwork.qml").read_text(encoding="utf-8")
-        self.assertIn('function connectivityLabel(value)', network)
-        self.assertIn('value === "portal"', network)
-        self.assertIn("Ethernet'e özel değildir", network)
-        self.assertIn('text: "IP ayarı"', network)
+        self.assertIn("readonly property bool connected", network)
+        self.assertIn("readonly property string connectionType", network)
+        self.assertIn('atlasNetwork.active.type === "ethernet" ? "Ethernet"', network)
+        self.assertIn('text: panel.connected ? "Bağlantı etkin" : "Bağlantı yok"', network)
+        self.assertIn('Text { text: "Ethernet"', network)
+        self.assertIn('atlasNetwork.wired.carrier === "on" ? "Kablo bağlı"', network)
+        self.assertIn('{label: "IP ayarı", value: atlasNetwork.wired.dhcp || "Bilinmiyor"}', network)
         self.assertIn("reconnectWired()", network)
         self.assertIn("toggleWifi()", network)
-
     def test_wifi_quick_setting_uses_networkmanager_radio_control(self):
         with patch.object(self.ui.subprocess, "run", return_value=type("Result", (), {"returncode": 0, "stdout": "enabled\n"})()):
             network = self.ui.AtlasNetwork()

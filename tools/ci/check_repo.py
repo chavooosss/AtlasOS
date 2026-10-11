@@ -33,6 +33,7 @@ PUBLIC_DOCS = (
     "docs/legal/ai-generated-assets.md",
     "docs/legal/asset-provenance-attestation.md",
     "docs/legal/ai-provider-terms-matrix.md",
+    "docs/legal/google-chrome-integration.md",
     "docs/project/status.md",
     "docs/project/publication-manifest.md",
     "docs/project/privacy-inventory.md",
@@ -48,6 +49,7 @@ PUBLIC_DOCS = (
     "docs/release/checklist.md",
     "docs/release/process.md",
     "docs/release/release-notes-0.6.2.md",
+    "docs/release/release-notes-0.6.4.md",
     "docs/release/github-release-0.6.2.md",
     "docs/release/third-party-notices.md",
     "docs/release/decisions/0001-first-public-release.md",
@@ -152,7 +154,9 @@ def check_manifest_and_version(errors: list[str]) -> set[str]:
     version = (ROOT / "VERSION").read_text(encoding="ascii").strip()
     if not re.fullmatch(r"\d+\.\d+\.\d+(?:[-.][A-Za-z0-9.-]+)?", version):
         fail("VERSION is not a valid dotted release version", errors)
-    if manifest.get("project_version") != version:
+    # The original first-commit manifest is a completed historical plan, not
+    # the current release metadata source. Preserve its initial version record.
+    if manifest.get("status") != "historical-plan-completed" and manifest.get("project_version") != version:
         fail(f"manifest project_version disagrees with VERSION ({version})", errors)
     license_path = ROOT / "LICENSE"
     if not license_path.is_file() or "MIT License" not in license_path.read_text(encoding="utf-8"):
@@ -206,6 +210,7 @@ def check_manifest_and_version(errors: list[str]) -> set[str]:
         "atlas-boot/Cargo.lock",
         "docs/release/README.md",
         "docs/release/release-notes-0.6.2.md",
+        "docs/release/release-notes-0.6.4.md",
         "docs/release/decisions/0001-first-public-release.md",
         "tests/test_release_metadata.py",
         "docs/release/release-manifest-0.6.2.json",
@@ -227,22 +232,37 @@ def check_manifest_and_version(errors: list[str]) -> set[str]:
 
 
 def check_future_browser_policy(errors: list[str]) -> None:
-    active_paths = (
+    build_paths = (
         "config/package-lists/atlasos-live.list.chroot",
         "iso/build-atlasos.sh",
         "config/hooks/normal/010-atlasos-branding.hook.chroot",
-        "config/includes.chroot/usr/local/bin/atlasos-browser",
         "config/includes.chroot/usr/local/bin/atlasos-open-request",
         "config/includes.chroot/usr/local/share/atlasos/ui/Main.qml",
     )
     forbidden = re.compile(r"(?i)(?:google-chrome(?:-stable)?|dl\.google\.com)")
-    for relative in active_paths:
+    for relative in build_paths:
         path = ROOT / relative
         if not path.is_file():
             fail(f"active future-build browser policy file is missing: {relative}", errors)
             continue
         if forbidden.search(path.read_text(encoding="utf-8", errors="replace")):
-            fail(f"Chrome vendor package/repository reference found in active future-build configuration: {relative}", errors)
+            fail(f"Chrome vendor package/repository reference found in image build configuration: {relative}", errors)
+
+    launcher_path = ROOT / "config/includes.chroot/usr/local/bin/atlasos-browser"
+    installer_path = ROOT / "config/includes.chroot/usr/local/libexec/atlasos-install-google-chrome"
+    if not launcher_path.is_file() or not installer_path.is_file():
+        fail("explicit Chrome launcher/installer integration is incomplete", errors)
+        return
+    launcher = launcher_path.read_text(encoding="utf-8", errors="replace")
+    installer = installer_path.read_text(encoding="utf-8", errors="replace")
+    if "google-chrome-stable" not in launcher or "https://chavooosss.github.io/AtlasOS/" not in launcher:
+        fail("browser launcher must prefer installed Chrome and use the AtlasOS homepage by default", errors)
+    if "--ok-label=\"Şartları inceledim · indir\"" not in launcher or "pkexec /usr/local/libexec/atlasos-install-google-chrome" not in launcher:
+        fail("Chrome installation must remain an explicit user-authorized action", errors)
+    if "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" not in installer:
+        fail("Chrome installer must use Google's official stable amd64 package endpoint", errors)
+    if "dpkg-deb --field" not in installer or '"${package_name}" != "google-chrome-stable"' not in installer or '"${package_arch}" != "amd64"' not in installer:
+        fail("Chrome installer must validate package identity and architecture before installation", errors)
 
 
 def check_public_docs(errors: list[str]) -> None:

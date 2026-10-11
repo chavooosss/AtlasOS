@@ -67,7 +67,7 @@ Item {
             width: parent.width; columns: width >= 680 ? 2 : 1; spacing: 12
             Repeater {
                 model: [
-                    {title: "Sürüm / kernel", value: "AtlasOS " + (snapshotData.atlas_version || "0.6.3") + " · " + (snapshotData.kernel || "Mevcut değil")},
+                    {title: "Sürüm / kernel", value: "AtlasOS " + (snapshotData.atlas_version || "0.6.4") + " · " + (snapshotData.kernel || "Mevcut değil")},
                     {title: "İşlemci", value: snapshotData.cpu && snapshotData.cpu.model ? snapshotData.cpu.model : "Mevcut değil"},
                     {title: "Bellek", value: snapshotData.memory && snapshotData.memory.total_bytes ? Math.round(snapshotData.memory.total_bytes / 1048576) + " MB toplam · " + Math.round(snapshotData.memory.available_bytes / 1048576) + " MB kullanılabilir" : "Mevcut değil"},
                     {title: "Grafik / sürücü", value: snapshotData.gpu && snapshotData.gpu.length ? snapshotData.gpu[0].device + " · " + (snapshotData.gpu[0].driver || "Sürücü mevcut değil") + (snapshotData.gpu[0].pci_vendor_id ? " · " + snapshotData.gpu[0].pci_vendor_id + ":" + snapshotData.gpu[0].pci_device_id : "") : "Mevcut değil"},

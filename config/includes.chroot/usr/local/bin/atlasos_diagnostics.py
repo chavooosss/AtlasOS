@@ -19,7 +19,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.6.3"
+VERSION = "0.6.4"
 FORBIDDEN_COMMANDS = {
     "mkfs", "mkfs.ext4", "mkfs.vfat", "wipefs", "fdisk", "sfdisk",
     "parted", "dd", "fio", "fsck", "ntfsfix", "resize2fs", "blkdiscard",
@@ -748,7 +748,7 @@ class DiagnosticsCollector:
                     "storage_writes": "volatile /run bundle only until explicit removable export",
                     "filesystem_scanning": False, "auto_mount": False}
         self._write_json(root, "collection/manifest.json", manifest)
-        self._write_text(root, "README.txt", "AtlasOS 0.6.3 Tanılama Paketi\nBu paket salt okunur sistem gözlemlerini içerir. Dahili depolama korunur.\nGünlükler sınırlı ve sanitize edilmiştir; manifest.json ayrıntıları listeler.\n")
+        self._write_text(root, "README.txt", "AtlasOS 0.6.4 Tanılama Paketi\nBu paket salt okunur sistem gözlemlerini içerir. Dahili depolama korunur.\nGünlükler sınırlı ve sanitize edilmiştir; manifest.json ayrıntıları listeler.\n")
         report(*stages[5])
         archive = root.parent / f"AtlasOS-Diagnostics-{VERSION}-{timestamp}.zip"
         with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=5) as bundle:

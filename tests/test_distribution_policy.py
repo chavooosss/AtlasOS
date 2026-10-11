@@ -16,19 +16,25 @@ class DistributionPolicyTests(unittest.TestCase):
         self.assertIn("third-party", scope.lower())
         self.assertIn('license = "MIT OR Apache-2.0"', crate)
 
-    def test_chrome_and_google_repository_absent_from_active_build_inputs(self):
-        active = [
+    def test_chrome_is_optional_and_official_install_is_explicit(self):
+        image_inputs = [
             "config/package-lists/atlasos-live.list.chroot",
             "iso/build-atlasos.sh",
             "config/hooks/normal/010-atlasos-branding.hook.chroot",
-            "config/includes.chroot/usr/local/bin/atlasos-browser",
-            "config/includes.chroot/usr/local/bin/atlasos-open-request",
-            "config/includes.chroot/usr/local/share/atlasos/ui/Main.qml",
         ]
-        for relative in active:
+        for relative in image_inputs:
             content = (ROOT / relative).read_text(encoding="utf-8", errors="replace").lower()
             self.assertNotIn("google-chrome", content, relative)
             self.assertNotIn("dl.google.com", content, relative)
+        launcher = (ROOT / "config/includes.chroot/usr/local/bin/atlasos-browser").read_text(encoding="utf-8")
+        installer = (ROOT / "config/includes.chroot/usr/local/libexec/atlasos-install-google-chrome").read_text(encoding="utf-8")
+        self.assertIn("google-chrome-stable", launcher)
+        self.assertIn("https://chavooosss.github.io/AtlasOS/", launcher)
+        self.assertIn("Şartları inceledim · indir", launcher)
+        self.assertIn("pkexec /usr/local/libexec/atlasos-install-google-chrome", launcher)
+        self.assertIn("https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", installer)
+        self.assertIn('"${package_name}" != "google-chrome-stable"', installer)
+        self.assertIn('"${package_arch}" != "amd64"', installer)
 
     def test_rights_uncertain_assets_are_not_public_source_candidates(self):
         manifest = json.loads((ROOT / "docs/project/first-commit-manifest.json").read_text(encoding="utf-8"))

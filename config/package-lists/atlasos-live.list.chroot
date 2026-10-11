@@ -33,6 +33,7 @@ ristretto
 xfce4-terminal
 htop
 mate-polkit
+pkexec
 apparmor
 python3-pyside6.qtquick
 python3-pyside6.qtwebenginequick

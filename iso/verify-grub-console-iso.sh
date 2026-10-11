@@ -24,7 +24,7 @@ printf '%s  %s\n' \
   'f0307d96e8f5f8760534bc62472f309e3882d92b24704a49069659f59d7dd586' "${TMP}/filesystem.squashfs" \
   | sha256sum -c -
 
-strings "${TMP}/BOOTX64.EFI" | grep -F 'ATLAS OS 0.6.3  |  Live oturumu baslat' >/dev/null
+strings "${TMP}/BOOTX64.EFI" | grep -F 'ATLAS OS 0.6.4  |  Live oturumu baslat' >/dev/null
 strings "${TMP}/BOOTX64.EFI" | grep -F 'terminal_output console' >/dev/null
 strings "${TMP}/BOOTX64.EFI" | grep -F 'set gfxpayload=keep' >/dev/null
 echo 'Atlas console menu embedded'
