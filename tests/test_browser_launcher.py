@@ -18,7 +18,7 @@ class BrowserLauncherTests(unittest.TestCase):
             fake_bin = root / "bin"
             fake_bin.mkdir()
             counter = root / "launch-count"
-            fake_browser = fake_bin / "chromium"
+            fake_browser = fake_bin / "google-chrome-stable"
             fake_browser.write_text(
                 "#!/bin/sh\n"
                 f"count=0; test ! -f '{counter}' || read count < '{counter}'\n"
