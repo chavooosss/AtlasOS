@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as Controls
 import "../theme"
 
 Item {
@@ -19,11 +20,11 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 0
         anchors.bottom: parent.bottom
-        height: width * 126 / 1052
+        height: width * (dashboard.boardMode ? 108 : 126) / 1052
         source: "../branding/atlas-dashboard-footer.png"
         fillMode: Image.PreserveAspectFit
         smooth: true
-        opacity: 0.96
+        opacity: dashboard.boardMode ? 0.76 : 0.96
         z: 0
     }
 
@@ -38,12 +39,13 @@ Item {
         contentHeight: contentColumn.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        Controls.ScrollBar.vertical: Controls.ScrollBar { policy: Controls.ScrollBar.AsNeeded }
         z: 1
 
         Column {
             id: contentColumn
             width: scroll.width
-            spacing: (dashboard.compactLayout ? 12 : 21) * dashboard.scaleFactor
+            spacing: (dashboard.boardMode ? (dashboard.compactLayout ? 10 : 16) : (dashboard.compactLayout ? 12 : 21)) * dashboard.scaleFactor
 
             Column {
                 width: parent.width
@@ -72,10 +74,10 @@ Item {
             Item {
                 id: resourcesArea
                 width: parent.width
-                property bool wide: width >= 850 * dashboard.scaleFactor
+                property bool wide: width >= (dashboard.boardMode ? 680 : 850) * dashboard.scaleFactor
                 property real groupGap: 20 * dashboard.scaleFactor
-                property real booksWidth: wide ? (width - groupGap) * 0.40 : width
-                property real mebWidth: wide ? (width - groupGap) * 0.60 : width
+                property real booksWidth: wide ? (width - groupGap) * (dashboard.boardMode ? (width < 1000 ? 0.42 : 0.36) : 0.40) : width
+                property real mebWidth: wide ? width - groupGap - booksWidth : width
                 height: wide ? Math.max(booksGroup.implicitHeight, mebGroup.implicitHeight) : booksGroup.implicitHeight + groupGap + mebGroup.implicitHeight
                 visible: dashboard.page === "home" || dashboard.page === "books"
 
@@ -91,8 +93,10 @@ Item {
                         spacing: 10 * dashboard.scaleFactor
                         AtlasCard {
                             width: dashboard.page === "books" ? (parent.width - parent.spacing) / 2 : parent.width
-                            cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor
-                            iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                            cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112)
+                            iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72)
+                            scaleFactor: dashboard.scaleFactor
+                            textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                             title: "EBA"
                             detail: "Dijital ders kitapları ve içerikler"
                             iconName: "eba"
@@ -103,8 +107,10 @@ Item {
                         AtlasCard {
                             visible: dashboard.page === "books"
                             width: visible ? (parent.width - parent.spacing) / 2 : 0
-                            cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor
-                            iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                            cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112)
+                            iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72)
+                            scaleFactor: dashboard.scaleFactor
+                            textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                             title: "Bu Cihaz"
                             detail: "Ders klasörleri ve dosyalar"
                             iconName: "folder"
@@ -151,12 +157,17 @@ Item {
                     }
                     Grid {
                         width: parent.width
-                        columns: resourcesArea.wide ? 2 : (width < 610 * dashboard.scaleFactor ? 1 : 2)
+                        // Keep MEB resource cards comfortably wide on compact
+                        // smartboard work areas; the dashboard Flickable handles
+                        // the additional row without clipping the cards.
+                        columns: resourcesArea.wide && width >= (dashboard.boardMode ? 560 : 610) * dashboard.scaleFactor ? 2 : 1
                         spacing: 10 * dashboard.scaleFactor
                         AtlasCard {
                             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                            cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor
-                            iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                            cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112)
+                            iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72)
+                            scaleFactor: dashboard.scaleFactor
+                            textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                             title: "OGM Materyal"
                             detail: "Zengin eğitim materyalleri"
                             iconName: "ogm"
@@ -166,8 +177,10 @@ Item {
                         }
                         AtlasCard {
                             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                            cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor
-                            iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                            cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112)
+                            iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72)
+                            scaleFactor: dashboard.scaleFactor
+                            textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                             title: "MEBİ"
                             detail: "Konu anlatımları ve etkinlikler"
                             iconName: "mebi"
@@ -187,47 +200,47 @@ Item {
                 Grid {
                     id: toolsGrid
                     width: parent.width
-                    columns: width < 720 * dashboard.scaleFactor ? 2 : 3
+                    columns: width < (dashboard.boardMode ? 760 : 720) * dashboard.scaleFactor ? 2 : 3
                     spacing: (dashboard.compactLayout ? 8 : 12) * dashboard.scaleFactor
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "PDF Aç"; detail: "PDF aç ve görüntüle"; iconName: "pdf"; accent: theme.red; target: "pdf"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "Sunum Aç"; detail: "Sunum dosyalarını göster"; iconName: "presentation"; accent: theme.amber; target: "presentation"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "Video Aç"; detail: "Video aç ve oynat"; iconName: "video"; accent: "#5268e8"; target: "video"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "Beyaz Tahta"; detail: "Serbestçe yaz, çiz, oluştur"; iconName: "whiteboard"; accent: theme.green; target: "whiteboard"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "Ekrana Çiz"; detail: "Tahta üzerinde not al"; iconName: "whiteboard"; accent: theme.blue; target: "whiteboard"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor; textScale: dashboard.boardMode && dashboard.compactLayout ? 0.92 : 1.0
                         title: "Dosyalar"; detail: "Ders materyallerine göz at"; iconName: "folder"; accent: "#45a8e8"; target: "files"
                         onActivated: dashboard.openRequested(target)
                     }
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-                        cardHeight: (dashboard.compactLayout ? 92 : 112) * dashboard.scaleFactor; iconSize: (dashboard.compactLayout ? 58 : 72) * dashboard.scaleFactor
+                        cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor
                         title: "Web Tarayıcısı"; detail: "Web sayfalarını aç"; iconName: "applications"; accent: theme.blue; target: "browser"
                         onActivated: dashboard.openRequested(target)
                     }

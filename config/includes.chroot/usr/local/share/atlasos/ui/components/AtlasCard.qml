@@ -12,6 +12,7 @@ Rectangle {
     property real cardHeight: 104
     property real iconSize: 64
     property real scaleFactor: 1.0
+    property real textScale: 1.0
     property bool hovered: false
     property bool pressed: false
     signal activated(string target)
@@ -26,17 +27,17 @@ Rectangle {
         x: 14 * card.scaleFactor; y: (parent.height - height) / 2
         width: card.iconSize * card.scaleFactor; height: card.iconSize * card.scaleFactor; radius: theme.radiusSmall * card.scaleFactor
         color: available ? card.accent : "#9daeba"
-        AtlasIcon { anchors.centerIn: parent; width: card.iconSize * 0.48; height: card.iconSize * 0.48; name: card.iconName }
+        AtlasIcon { anchors.centerIn: parent; width: card.iconSize * 0.48 * card.scaleFactor; height: card.iconSize * 0.48 * card.scaleFactor; name: card.iconName }
     }
     Column {
         anchors.left: iconBox.right
-        anchors.leftMargin: 13 * card.scaleFactor
+        anchors.leftMargin: (card.scaleFactor > 1.0 && card.iconSize < 70 ? 7 : 13) * card.scaleFactor
         anchors.right: arrow.left
         anchors.rightMargin: 5
         anchors.verticalCenter: parent.verticalCenter
         spacing: 5 * card.scaleFactor
-        Text { width: parent.width; text: card.title; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: (card.title.length > 10 ? 16 : theme.typeCard) * card.scaleFactor; font.bold: true; elide: Text.ElideRight }
-        Text { width: parent.width; text: card.available ? card.detail : "Yakında"; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: theme.typeSecondary * card.scaleFactor; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+        Text { width: parent.width; text: card.title; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: (card.title.length > 10 ? 16 : theme.typeCard) * Math.max(1.0, Math.min(card.scaleFactor, card.iconSize < 70 ? 1.0 : card.scaleFactor)) * card.textScale; fontSizeMode: card.scaleFactor > 1.0 && card.iconSize < 70 ? Text.Fit : Text.FixedSize; minimumPixelSize: 12; font.bold: true; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+        Text { width: parent.width; text: card.available ? card.detail : "Yakında"; color: theme.muted; font.family: theme.fontFamily; font.pixelSize: theme.typeSecondary * Math.max(1.0, Math.min(card.scaleFactor, card.iconSize < 70 ? 1.0 : card.scaleFactor)) * card.textScale; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
     }
     AtlasIcon {
         id: arrow

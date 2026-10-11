@@ -11,6 +11,8 @@ Rectangle {
     property var audioController: null
     property var networkController: null
     property bool boardMode: false
+    property real scaleFactor: 1.0
+    readonly property real densityScale: boardMode ? scaleFactor : 1.0
     property int notificationCount: 0
     property date currentTime: new Date()
     property bool compact: width < 1180
@@ -20,17 +22,17 @@ Rectangle {
     signal settingsRequested()
     signal powerRequested()
 
-    height: width < 1080 ? 66 : 74
+    height: boardMode ? 82 * scaleFactor : width < 1080 ? 66 : 74
     color: "#f7faff"
     AtlasTheme { id: theme }
     Timer { interval: 15000; running: true; repeat: true; onTriggered: header.currentTime = new Date() }
 
     Image {
         id: logo
-        x: header.compact ? 16 : 24
+        x: (header.compact ? 16 : 24) * header.densityScale
         anchors.verticalCenter: parent.verticalCenter
-        width: header.compact ? 168 : header.width >= 1550 ? 220 : 204
-        height: header.compact ? 48 : 66
+        width: (header.compact ? 168 : header.width >= 1550 ? 220 : 204) * header.densityScale
+        height: (header.compact ? 48 : 66) * header.densityScale
         source: "../branding/atlas-primary.png"
         sourceSize.width: 780
         sourceSize.height: 290
@@ -41,26 +43,26 @@ Rectangle {
     Text {
         id: tagline
         anchors.left: logo.right
-        anchors.leftMargin: 12
+        anchors.leftMargin: 12 * header.densityScale
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(120, statusRow.x - x - 20)
         visible: header.width >= 1420
         text: "Daha iyi bir yarın için, bugünün sınıfında"
         color: theme.muted
-        font.pixelSize: 14
+        font.pixelSize: 14 * header.densityScale
         elide: Text.ElideRight
     }
 
     Row {
         id: statusRow
         anchors.right: clock.left
-        anchors.rightMargin: 14
+        anchors.rightMargin: 14 * header.densityScale
         anchors.verticalCenter: parent.verticalCenter
-        spacing: header.compact ? 8 : 16
+        spacing: (header.compact ? 8 : 16) * header.densityScale
 
         Item {
             id: networkItem
-            width: header.compact ? 82 : 126
+            width: (header.compact ? 82 : 126) * header.densityScale
             height: header.height - 6
             property bool connected: /bağlı/i.test(header.networkState) || header.networkState === "Bağlı"
             property bool internetProblem: /internet yok|internet kısıtlı|ağ girişi gerekli/i.test(header.networkState)
@@ -69,18 +71,18 @@ Rectangle {
                 id: networkIcon
                 x: 2
                 anchors.verticalCenter: parent.verticalCenter
-                width: header.compact ? 22 : 26
-                height: header.compact ? 22 : 26
+                width: (header.compact ? 22 : 26) * header.densityScale
+                height: (header.compact ? 22 : 26) * header.densityScale
                 name: "network"
                 strokeColor: networkItem.internetProblem ? theme.red : networkItem.connected ? theme.green : theme.muted
             }
             Column {
                 anchors.left: networkIcon.right
-                anchors.leftMargin: 8
+                anchors.leftMargin: 8 * header.densityScale
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 1
-                Text { text: networkItem.typeLabel; color: theme.ink; font.pixelSize: header.compact ? 12 : 13; font.bold: true }
-                Text { text: networkItem.internetProblem ? (header.networkState.indexOf("ağ girişi") >= 0 ? "Ağ girişi gerekli" : header.networkState.indexOf("kısıtlı") >= 0 ? "İnternet kısıtlı" : "İnternet yok") : networkItem.connected ? "Bağlı" : header.networkState; color: networkItem.internetProblem ? theme.red : networkItem.connected ? theme.green : theme.muted; font.pixelSize: header.compact ? 11 : 12; elide: Text.ElideRight; width: networkItem.width - networkIcon.width - 10 }
+                Text { text: networkItem.typeLabel; color: theme.ink; font.pixelSize: (header.compact ? 12 : 13) * header.densityScale; font.bold: true }
+                Text { text: networkItem.internetProblem ? (header.networkState.indexOf("ağ girişi") >= 0 ? "Ağ girişi gerekli" : header.networkState.indexOf("kısıtlı") >= 0 ? "İnternet kısıtlı" : "İnternet yok") : networkItem.connected ? "Bağlı" : header.networkState; color: networkItem.internetProblem ? theme.red : networkItem.connected ? theme.green : theme.muted; font.pixelSize: (header.compact ? 11 : 12) * header.densityScale; elide: Text.ElideRight; width: networkItem.width - networkIcon.width - 10 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -95,26 +97,26 @@ Rectangle {
             }
         }
 
-        Rectangle { width: 1; height: 36; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
+        Rectangle { width: 1; height: 36 * header.densityScale; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
 
         Item {
             id: audioStatus
             objectName: "atlasAudioStatus"
-            width: header.compact ? 78 : 90
+            width: (header.compact ? 78 : 90) * header.densityScale
             height: header.height - 6
             Row {
                 anchors.centerIn: parent
-                spacing: 7
+                spacing: 7 * header.densityScale
                 AtlasIcon {
-                    width: 24; height: 24
+                    width: 24 * header.densityScale; height: 24 * header.densityScale
                     name: !header.audioController || !header.audioController.available ? "volume-muted" : header.audioController.muted ? "volume-muted" : header.audioController.volume < 35 ? "volume-low" : "volume"
                     strokeColor: header.audioState === "Sessiz" || (header.audioController && header.audioController.muted) ? theme.red : theme.ink
                 }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 1
-                    Text { text: "Ses"; color: theme.ink; font.pixelSize: 13; font.bold: true }
-                    Text { text: header.audioController && header.audioController.available ? (header.audioController.muted ? "Sessiz" : header.audioController.volume + "%") : header.audioState; color: header.audioController && header.audioController.available && !header.audioController.muted ? theme.green : theme.muted; font.pixelSize: 12 }
+                    Text { text: "Ses"; color: theme.ink; font.pixelSize: 13 * header.densityScale; font.bold: true }
+                    Text { text: header.audioController && header.audioController.available ? (header.audioController.muted ? "Sessiz" : header.audioController.volume + "%") : header.audioState; color: header.audioController && header.audioController.available && !header.audioController.muted ? theme.green : theme.muted; font.pixelSize: 12 * header.densityScale }
                 }
             }
             MouseArea {
@@ -130,31 +132,31 @@ Rectangle {
             }
         }
 
-        Rectangle { width: 1; height: 36; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
+        Rectangle { width: 1; height: 36 * header.densityScale; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
 
         Row {
             id: penStatus
-            spacing: 7
+            spacing: 7 * header.densityScale
             anchors.verticalCenter: parent.verticalCenter
-            AtlasIcon { width: 24; height: 24; name: "pen"; strokeColor: header.penState === "Hazır" || header.penState === "Dokunmatik" ? theme.green : theme.ink }
+            AtlasIcon { width: 24 * header.densityScale; height: 24 * header.densityScale; name: "pen"; strokeColor: header.penState === "Hazır" || header.penState === "Dokunmatik" ? theme.green : theme.ink }
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 1
-                Text { text: "Kalem"; color: theme.ink; font.pixelSize: 13; font.bold: true }
-                Text { text: header.penState === "Algılanmadı" ? "Hazır değil" : header.penState; color: header.penState === "Hazır" || header.penState === "Dokunmatik" ? theme.green : theme.muted; font.pixelSize: 12 }
+                Text { text: "Kalem"; color: theme.ink; font.pixelSize: 13 * header.densityScale; font.bold: true }
+                Text { text: header.penState === "Algılanmadı" ? "Hazır değil" : header.penState; color: header.penState === "Hazır" || header.penState === "Dokunmatik" ? theme.green : theme.muted; font.pixelSize: 12 * header.densityScale }
             }
         }
 
-        Rectangle { width: 1; height: 36; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
+        Rectangle { width: 1; height: 36 * header.densityScale; color: theme.line; anchors.verticalCenter: parent.verticalCenter }
 
         Item {
-            width: 48; height: 58
-            AtlasIcon { anchors.centerIn: parent; name: "bell"; strokeColor: theme.ink; width: 25; height: 25 }
+            width: 48 * header.densityScale; height: 58 * header.densityScale
+            AtlasIcon { anchors.centerIn: parent; name: "bell"; strokeColor: theme.ink; width: 25 * header.densityScale; height: 25 * header.densityScale }
             Rectangle {
                 visible: header.notificationCount > 0
                 anchors.right: parent.right; anchors.top: parent.top
-                width: 19; height: 19; radius: 10; color: theme.red
-                Text { anchors.centerIn: parent; text: header.notificationCount > 9 ? "9+" : header.notificationCount; color: "white"; font.pixelSize: 10; font.bold: true }
+                width: 19 * header.densityScale; height: 19 * header.densityScale; radius: 10 * header.densityScale; color: theme.red
+                Text { anchors.centerIn: parent; text: header.notificationCount > 9 ? "9+" : header.notificationCount; color: "white"; font.pixelSize: 10 * header.densityScale; font.bold: true }
             }
             MouseArea { anchors.fill: parent; onClicked: header.notificationsRequested() }
         }
@@ -163,20 +165,20 @@ Rectangle {
     Column {
         id: clock
         anchors.right: parent.right
-        anchors.rightMargin: header.compact ? 14 : 24
+        anchors.rightMargin: (header.compact ? 14 : 24) * header.densityScale
         anchors.verticalCenter: parent.verticalCenter
         spacing: 0
         Text {
             text: Qt.formatTime(header.currentTime, "HH:mm")
             color: theme.ink
-            font.pixelSize: header.compact ? 21 : 27
+            font.pixelSize: (header.compact ? 21 : 27) * header.densityScale
             font.bold: true
             anchors.right: parent.right
         }
         Text {
             text: Qt.locale("tr_TR").toString(header.currentTime, "dd MMMM yyyy")
             color: theme.muted
-            font.pixelSize: header.compact ? 10 : 12
+            font.pixelSize: (header.compact ? 10 : 12) * header.densityScale
             anchors.right: parent.right
         }
     }
