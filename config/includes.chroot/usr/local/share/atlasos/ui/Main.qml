@@ -19,8 +19,10 @@ Window {
     property string viewMode: "dashboard"
     property var atlasPreferences: null
     property bool boardMode: atlasPreferences !== null && (atlasPreferences.displayMode === "board" || (atlasPreferences.displayMode === "auto" && atlasPreferences.touchscreenDetected))
-    // Keep board targets generous while allowing the timetable and workspace to reflow.
-    property real interfaceScale: root.boardMode ? (root.width < 1440 ? 1.0 : 1.08) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
+    // A smartboard is normally viewed from several metres away. Scale its
+    // controls and typography as a coordinated density, including at the
+    // common 1366 logical-pixel framebuffer used by some 1080p panels.
+    property real interfaceScale: root.boardMode ? (root.width < 1440 ? 1.10 : 1.25) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
     property string workspaceTitle: ""
     property bool notificationsOpen: false
     property var lessons: []
@@ -361,6 +363,7 @@ Window {
         audioController: atlasAudio
         networkController: atlasNetwork
         boardMode: root.boardMode
+        scaleFactor: root.interfaceScale
         penState: root.systemStatus.pen
         onNetworkRequested: root.openTool("network")
         onSettingsRequested: root.openTool("settings")
@@ -371,7 +374,7 @@ Window {
     AtlasSidebar {
         id: sidebar
         visible: ["dashboard", "settings", "network", "files"].indexOf(root.viewMode) >= 0
-        width: root.boardMode ? Math.max(142, Math.min(166, root.width * 0.09)) : Math.max(112, Math.min(144, root.width * 0.086))
+        width: root.boardMode ? (root.width < 1440 ? Math.max(142, Math.min(154, root.width * 0.10)) : Math.max(166, Math.min(190, root.width * 0.096))) : Math.max(112, Math.min(144, root.width * 0.086))
         anchors.top: header.bottom; anchors.bottom: parent.bottom; anchors.left: parent.left
         currentPage: root.viewMode === "settings" || root.viewMode === "network" ? "settings" : root.viewMode === "files" ? "books" : root.page
         itemScale: root.interfaceScale
@@ -385,7 +388,7 @@ Window {
     LessonPanel {
         id: lessonPanel
         visible: root.viewMode === "dashboard"
-        width: root.boardMode ? Math.min(470, Math.max(350, root.width * 0.285)) : Math.min(452, Math.max(300, root.width * 0.27))
+        width: root.boardMode ? (root.width < 1440 ? Math.min(390, Math.max(350, root.width * 0.285)) : Math.min(520, Math.max(370, root.width * 0.30))) : Math.min(452, Math.max(300, root.width * 0.27))
         anchors.top: header.bottom; anchors.bottom: parent.bottom; anchors.right: parent.right
         lessons: root.lessons
         timeline: root.scheduleTimeline
