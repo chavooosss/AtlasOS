@@ -1,5 +1,7 @@
+import hashlib
 import json
 import fnmatch
+import subprocess
 import unittest
 
 from tools.ci.check_repo import ROOT, manifest_source_files
@@ -51,6 +53,37 @@ class DistributionPolicyTests(unittest.TestCase):
                 if path.startswith("package:"):
                     continue
                 self.assertFalse(any(fnmatch.fnmatchcase(candidate, path) for candidate in candidates), path)
+
+    def test_branding_preparation_reuses_tracked_assets_without_mutating_them(self):
+        script = ROOT / "iso/prepare-branding-assets.sh"
+        source = script.read_text(encoding="utf-8")
+        self.assertNotIn("docs/assets", source)
+
+        tracked = subprocess.run(
+            [
+                "git",
+                "ls-files",
+                "--",
+                "config/includes.chroot/usr/local/share/atlasos/ui/branding",
+                "config/includes.chroot/usr/share/atlasos/branding",
+                "config/includes.chroot/usr/share/plymouth/themes/atlasos",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        assets = [ROOT / path for path in tracked.stdout.splitlines() if path]
+        self.assertTrue(assets, "expected tracked AtlasOS branding assets")
+        before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in assets}
+
+        result = subprocess.run(
+            ["bash", str(script)], cwd=ROOT, text=True, capture_output=True, check=False
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("reused", result.stdout)
+        after = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in assets}
+        self.assertEqual(before, after, "branding preparation must not rewrite tracked artwork")
 
     def test_ai_asset_clearance_records_provider_and_third_party_review(self):
         inventory = json.loads((ROOT / "docs/legal/asset-inventory.json").read_text(encoding="utf-8"))
