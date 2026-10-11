@@ -45,7 +45,7 @@ Controls.Popup {
                 model: [
                     {key: "restart", label: "Yeniden Başlat", hint: "Sistemi kapatıp tekrar açar.", icon: "refresh"},
                     {key: "shutdown", label: "Sistemi Kapat", hint: "AtlasOS'yi güvenli şekilde kapatır.", icon: "power"},
-                    {key: "logout", label: "Oturumu Kapat", hint: "Bu oturumdan çıkış yapar.", icon: "arrow-right"}
+                    {key: "logout", label: "Oturumu Kapat", hint: "Bu oturumdan çıkış yapar.", icon: "logout"}
                 ]
                 delegate: Rectangle {
                     required property var modelData

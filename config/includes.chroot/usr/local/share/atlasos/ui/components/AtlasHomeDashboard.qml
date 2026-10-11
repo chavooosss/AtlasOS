@@ -241,7 +241,7 @@ Item {
                     AtlasCard {
                         width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
                         cardHeight: dashboard.boardMode ? (dashboard.compactLayout ? 104 : 128) : (dashboard.compactLayout ? 92 : 112); iconSize: dashboard.boardMode ? (dashboard.compactLayout ? 68 : 78) : (dashboard.compactLayout ? 58 : 72); scaleFactor: dashboard.scaleFactor
-                        title: "Web Tarayıcısı"; detail: "Web sayfalarını aç"; iconName: "applications"; accent: theme.blue; target: "browser"
+                        title: "Web Tarayıcısı"; detail: "Web sayfalarını aç"; iconName: "browser"; accent: theme.blue; target: "browser"
                         onActivated: dashboard.openRequested(target)
                     }
                 }

@@ -10,7 +10,7 @@ ICON_ASSETS = UI / "icons/tabler"
 
 REQUIRED_NAMES = {
     "home", "lessons", "files", "applications", "settings", "about", "help", "power",
-    "wifi", "network", "ethernet", "volume", "volume-low", "volume-muted", "pen", "bell",
+    "wifi", "network", "ethernet", "airplane", "airplane-mode", "logout", "restart", "notifications", "volume", "volume-low", "volume-muted", "pen", "bell",
     "display", "accessibility", "developer", "bluetooth", "night-light", "cast", "search",
     "arrow-left", "arrow-right", "arrow-up", "arrow-down", "close", "refresh", "folder",
     "document", "pdf", "video", "presentation", "whiteboard", "calendar", "clock", "bulb",
@@ -45,6 +45,44 @@ class TablerIconTests(unittest.TestCase):
             self.assertEqual(root.get("stroke"), "#ffffff", path.name)
             self.assertEqual(root.get("stroke-linecap"), "round", path.name)
             self.assertEqual(root.get("stroke-linejoin"), "round", path.name)
+
+    def test_semantic_aliases_remain_distinct(self):
+        distinct_pairs = (
+            ("bluetooth", "wifi"),
+            ("airplane", "wifi"),
+            ("ethernet", "wifi"),
+            ("ethernet", "network"),
+            ("files", "lessons"),
+            ("developer", "settings"),
+            ("browser", "applications"),
+            ("logout", "arrow-right"),
+            ("network", "wifi"),
+            ("display", "screen-draw"),
+            ("cast", "display"),
+            ("power", "restart"),
+        )
+        for left, right in distinct_pairs:
+            with self.subTest(left=left, right=right):
+                self.assertNotEqual(self.mapping[left], self.mapping[right])
+
+    def test_ui_uses_semantic_icons_for_confirmed_concepts(self):
+        components = UI / "components"
+        quick = (components / "AtlasQuickSettings.qml").read_text(encoding="utf-8")
+        sidebar = (components / "AtlasSidebar.qml").read_text(encoding="utf-8")
+        settings_nav = (components / "AtlasSettingsNav.qml").read_text(encoding="utf-8")
+        home = (components / "AtlasHomeDashboard.qml").read_text(encoding="utf-8")
+        power = (components / "AtlasPowerMenu.qml").read_text(encoding="utf-8")
+        self.assertIn('{label: "Bluetooth", icon: "bluetooth"}', quick)
+        self.assertIn('{label: "Uçak Modu", icon: "airplane"}', quick)
+        self.assertIn('name: "wifi"', quick)
+        self.assertIn('name: "ethernet"', quick)
+        self.assertIn('{ label: "Dersler", icon: "books"', sidebar)
+        self.assertIn('{ label: "Dosyalar", icon: "files"', sidebar)
+        self.assertIn('label: "Geliştirici", hint: "Güvenli tanılama", icon: "developer"', settings_nav)
+        self.assertIn('{key: "display", label: "Görünüm", hint: "Ekran ve boyut", icon: "display"}', settings_nav)
+        self.assertIn('title: "Web Tarayıcısı"; detail: "Web sayfalarını aç"; iconName: "browser"', home)
+        self.assertIn('label: "Oturumu Kapat"', power)
+        self.assertIn('icon: "logout"', power)
 
     def test_qml_uses_local_svg_with_runtime_theme_tint(self):
         self.assertIn("../icons/tabler/", self.qml)

@@ -29,7 +29,7 @@ Rectangle {
             model: [
                 { label: "Ana Sayfa", icon: "home", page: "home", active: true },
                 { label: "Dersler", icon: "books", page: "lessons", active: true },
-                { label: "Dosyalar", icon: "books", page: "books", active: true },
+                { label: "Dosyalar", icon: "files", page: "books", active: true },
                 { label: "Uygulamalar", icon: "applications", page: "tools", active: true },
                 { label: "Ayarlar", icon: "settings", page: "settings", active: true },
                 { label: "Hakkında", icon: "help", page: "about", active: true }

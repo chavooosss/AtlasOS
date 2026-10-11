@@ -27,7 +27,7 @@ Item {
         {key: "books", label: "Ders Kitapları", icon: "books", url: booksFolder.toString()},
         {key: "documents", label: "Belgeler", icon: "file", url: homeFolder + "/Documents"},
         {key: "downloads", label: "İndirilenler", icon: "folder", url: downloadsFolder.toString()},
-        {key: "desktop", label: "Masaüstü", icon: "screen-draw", url: homeFolder + "/Desktop"},
+        {key: "desktop", label: "Masaüstü", icon: "display", url: homeFolder + "/Desktop"},
         {key: "pictures", label: "Resimler", icon: "file", url: homeFolder + "/Pictures"},
         {key: "videos", label: "Videolar", icon: "video", url: homeFolder + "/Videos"},
         {key: "music", label: "Müzikler", icon: "volume", url: homeFolder + "/Music"},
