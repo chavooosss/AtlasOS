@@ -401,19 +401,26 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn('"Veli Ercan"', settings_source)
         self.assertIn("startupSoundChanged(bool enabled)", settings_source)
 
-    def test_new_user_logos_drive_interface_and_boot_themes(self):
+    def test_tracked_logos_drive_interface_and_boot_themes(self):
         root = pathlib.Path(__file__).resolve().parents[1]
         prepare = (root / "iso/prepare-branding-assets.sh").read_text(encoding="utf-8")
         header = (root / "config/includes.chroot/usr/local/share/atlasos/ui/components/AtlasHeader.qml").read_text(encoding="utf-8")
         about = (root / "config/includes.chroot/usr/local/share/atlasos/ui/components/AtlasSettings.qml").read_text(encoding="utf-8")
         plymouth = (root / "config/includes.chroot/usr/share/plymouth/themes/atlasos/atlasos.script").read_text(encoding="utf-8")
-        for filename in (
-            "atlas-os sistem içi logo.jpg",
-            "atlas-os açılış animasyonu ve diğer açılışla akalı yerlerde kullanılıcak görsel.jpg",
+        for relative in (
+            "config/includes.chroot/usr/local/share/atlasos/ui/branding/atlas-primary.png",
+            "config/includes.chroot/usr/local/share/atlasos/ui/branding/atlas-symbol.png",
+            "config/includes.chroot/usr/share/atlasos/branding/atlas-symbol.png",
+            "config/includes.chroot/usr/share/plymouth/themes/atlasos/atlas-logo.png",
+            "config/includes.chroot/usr/share/plymouth/themes/atlasos/atlas-sweep-00.png",
         ):
-            self.assertTrue((root / "docs/assets" / filename).is_file())
-        self.assertIn("atlas-os sistem içi logo.jpg", prepare)
-        self.assertIn("atlas-os açılış animasyonu", prepare)
+            self.assertTrue((root / relative).is_file(), relative)
+            if pathlib.Path(relative).name.startswith("atlas-sweep-"):
+                self.assertIn("atlas-sweep-", prepare)
+            else:
+                self.assertIn(pathlib.Path(relative).name, prepare)
+        self.assertNotIn("docs/assets", prepare)
+        self.assertNotIn(".jpg", prepare.lower())
         self.assertIn('source: "../branding/atlas-primary.png"', header)
         self.assertIn('source: "../branding/atlas-symbol.png"', about)
         self.assertIn("Window.SetBackgroundTopColor (0.96, 0.98, 0.99)", plymouth)
