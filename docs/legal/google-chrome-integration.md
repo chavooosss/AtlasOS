@@ -12,3 +12,9 @@ Official references:
 - [Google Terms of Service](https://policies.google.com/terms)
 - [Chrome and ChromeOS Additional Terms](https://www.google.com/chrome/terms/)
 - [Chrome deployment on Linux](https://support.google.com/chrome/a/answer/9025903)
+
+## Live-session privilege boundary
+
+The installer uses a dedicated Polkit action bound to the exact helper path. Its default policy continues to require administrator authentication; the narrowly scoped rule grants authorization only to the local, active AtlasOS Live user session. The rule also requires boot=casper in /proc/cmdline and verifies that /rofs is a read-only squashfs mount. The helper independently checks both Live signals, requires root, and rejects every command-line argument before downloading or installing anything. If either Live signal is absent or cannot be verified, installation stops.
+
+No root password, sudo group membership, or general passwordless administration is added. The browser launcher does not pass its requested page URL or other user input into the helper. Browser logs redact requested URLs to avoid recording query strings or other potentially sensitive URL data.

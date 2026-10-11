@@ -31,7 +31,7 @@ done
 
 {
   echo "==== $(date -Is) ===="
-  echo "URL: ${url}"
+  echo "URL: [redacted]"
   echo "DISPLAY: ${DISPLAY:-}"
   echo "XDG_SESSION_TYPE: ${XDG_SESSION_TYPE:-}"
   echo "Selected browser: ${browser:-none}"
@@ -53,9 +53,24 @@ if [[ -z "${browser}" ]]; then
     --ok-label="Şartları inceledim · indir" \
     --cancel-label="Vazgeç" \
     --text="Google Chrome AtlasOS'a dahil edilmez. İstersen resmi Google Linux paketini indirip kurabilirsin.\n\nİndirmeden önce Google koşullarını incele:\nhttps://policies.google.com/terms\nhttps://www.google.com/chrome/terms/\n\nDevam düğmesi, Google'ın indirme koşulları kapsamında paketi istemen anlamına gelir. Chrome ilk açılışında gösterilen koşulları AtlasOS senin adına kabul etmez. Kurulum ayrıca Google'ın resmi güncelleme deposunu etkinleştirir."; then
-    if ! pkexec /usr/local/libexec/atlasos-install-google-chrome; then
-      show_error "Google Chrome kurulamadı. Ağ bağlantısını ve yönetici yetkisini kontrol edip yeniden deneyin."
-      exit 1
+    if pkexec /usr/local/libexec/atlasos-install-google-chrome; then
+      :
+    else
+      status=$?
+      case "$status" in
+        64) message="Chrome kurulum isteği geçersiz; kullanıcı argümanı kabul edilmiyor." ;;
+        65) message="Google'dan indirilen paket doğrulanamadı. Chrome kurulmadı." ;;
+        69) message="Google Chrome paketi indirilemedi veya gerekli sistem aracı bulunamadı. Ağ bağlantısını kontrol edip yeniden deneyin." ;;
+        70) message="Paket yöneticisi Chrome kurulumunu tamamlayamadı. İnternet bağlantısını kontrol edip yeniden deneyin." ;;
+        71) message="Kurulum tamamlandı fakat Chrome başlatıcısı bulunamadı." ;;
+        77) message="Chrome kurucusu gerekli yetkiyle başlatılamadı." ;;
+        78) message="Chrome kurulumu yalnızca AtlasOS Live oturumunda kullanılabilir." ;;
+        126) message="Chrome kurulum isteği iptal edildi." ;;
+        127) message="Bu oturumda Chrome kurulum yetkisi alınamadı. AtlasOS Live oturumunda yeniden deneyin." ;;
+        *) message="Google Chrome kurulumu başarısız oldu (hata kodu: ${status})." ;;
+      esac
+      show_error "$message"
+      exit "$status"
     fi
   else
     exit 0

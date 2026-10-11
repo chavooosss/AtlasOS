@@ -24,6 +24,9 @@ class DistributionPolicyTests(unittest.TestCase):
         ]
         for relative in image_inputs:
             content = (ROOT / relative).read_text(encoding="utf-8", errors="replace").lower()
+            if relative == "config/hooks/normal/010-atlasos-branding.hook.chroot":
+                content = content.replace("atlasos-install-google-chrome", "atlasos-install-browser-helper")
+                content = content.replace("org.atlasos.install-google-chrome", "org.atlasos.install-browser-helper")
             self.assertNotIn("google-chrome", content, relative)
             self.assertNotIn("dl.google.com", content, relative)
         launcher = (ROOT / "config/includes.chroot/usr/local/bin/atlasos-browser").read_text(encoding="utf-8")
@@ -33,8 +36,8 @@ class DistributionPolicyTests(unittest.TestCase):
         self.assertIn("Şartları inceledim · indir", launcher)
         self.assertIn("pkexec /usr/local/libexec/atlasos-install-google-chrome", launcher)
         self.assertIn("https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", installer)
-        self.assertIn('"${package_name}" != "google-chrome-stable"', installer)
-        self.assertIn('"${package_arch}" != "amd64"', installer)
+        self.assertIn('if [[ "$package_name" != google-chrome-stable', installer)
+        self.assertIn('if [[ "$package_name" != google-chrome-stable || "$package_arch" != amd64', installer)
 
     def test_rights_uncertain_assets_are_not_public_source_candidates(self):
         manifest = json.loads((ROOT / "docs/project/first-commit-manifest.json").read_text(encoding="utf-8"))

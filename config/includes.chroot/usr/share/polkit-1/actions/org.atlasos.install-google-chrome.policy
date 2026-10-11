@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>AtlasOS</vendor>
+  <vendor_url>https://chavooosss.github.io/AtlasOS/</vendor_url>
+  <action id="org.atlasos.install-google-chrome">
+    <description>Install Google Chrome for this AtlasOS Live session</description>
+    <description xml:lang="tr">Bu AtlasOS Live oturumu için Google Chrome'u kur</description>
+    <message>Authentication is required to install Google Chrome</message>
+    <message xml:lang="tr">Google Chrome'u kurmak için yetki gerekiyor</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/libexec/atlasos-install-google-chrome</annotate>
+  </action>
+</policyconfig>
