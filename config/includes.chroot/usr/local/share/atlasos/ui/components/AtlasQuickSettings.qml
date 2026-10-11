@@ -46,14 +46,14 @@ Item {
                 width: (parent.width - 24) / 3; height: parent.height; radius: theme.radiusLarge
                 color: quick.networkController && quick.networkController.wifiEnabled ? theme.atlasBlue : theme.surfaceMuted
                 border.color: quick.networkController && quick.networkController.wifiEnabled ? theme.atlasBlueHover : theme.borderSubtle
-                AtlasIcon { x: 18; y: 19; width: 35; height: 35; name: "network"; strokeColor: parent.color === theme.atlasBlue ? "white" : theme.atlasNavy }
+                AtlasIcon { x: 18; y: 19; width: 35; height: 35; name: "wifi"; strokeColor: parent.color === theme.atlasBlue ? "white" : theme.atlasNavy }
                 Text { x: 18; y: parent.height - 74; text: "Wi-Fi"; color: parent.color === theme.atlasBlue ? "white" : theme.ink; font.pixelSize: 19; font.bold: true }
                 Text { x: 18; y: parent.height - 46; width: parent.width - 36; text: quick.activeWifi ? quick.activeWifi + " · Bağlı" : quick.networkController && quick.networkController.wifiEnabled ? "Açık" : "Kapalı"; color: parent.color === theme.atlasBlue ? "#e3f1ff" : theme.muted; font.pixelSize: 14; elide: Text.ElideRight }
                 MouseArea { anchors.fill: parent; onClicked: quick.networkRequested() }
             }
             Rectangle {
                 width: (parent.width - 24) / 3; height: parent.height; radius: theme.radiusLarge; color: theme.surfaceMuted; border.color: theme.borderSubtle
-                AtlasIcon { x: 18; y: 19; width: 35; height: 35; name: "network"; strokeColor: theme.atlasNavy }
+                AtlasIcon { x: 18; y: 19; width: 35; height: 35; name: "ethernet"; strokeColor: theme.atlasNavy }
                 Text { x: 18; y: parent.height - 74; text: "Ethernet"; color: theme.ink; font.pixelSize: 19; font.bold: true }
                 Text { x: 18; y: parent.height - 46; width: parent.width - 36; text: quick.networkController && quick.networkController.wired.carrier === "on" ? "Kablo bağlı" : "Bağlı değil"; color: theme.muted; font.pixelSize: 14; elide: Text.ElideRight }
                 MouseArea { anchors.fill: parent; onClicked: quick.networkRequested() }
@@ -92,8 +92,8 @@ Item {
 
         Row { width: parent.width; height: quick.compact ? 108 : 130; spacing: 12
             Repeater { model: [
-                {label: "Bluetooth", icon: "network"},
-                {label: "Uçak Modu", icon: "network"},
+                {label: "Bluetooth", icon: "bluetooth"},
+                {label: "Uçak Modu", icon: "airplane"},
                 {label: "Gece Işığı", icon: "bulb"},
                 {label: "Ekran Yansıtma", icon: "screen-draw"}
             ]; delegate: Rectangle { required property var modelData; width: (parent.width - 36) / 4; height: parent.height; radius: theme.radiusLarge; color: theme.disabledSurface; border.color: theme.borderSubtle

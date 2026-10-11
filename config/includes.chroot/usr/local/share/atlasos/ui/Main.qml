@@ -633,7 +633,7 @@ Window {
         Behavior on opacity { NumberAnimation { duration: theme.motionNormal } }
         Row {
             anchors.fill: parent; anchors.margins: 18; spacing: 14
-            Rectangle { width: 42; height: 42; radius: 21; color: "#e5f6f1"; anchors.verticalCenter: parent.verticalCenter; Text { anchors.centerIn: parent; text: "✓"; color: theme.green; font.pixelSize: 22; font.bold: true } }
+            Rectangle { width: 42; height: 42; radius: 21; color: "#e5f6f1"; anchors.verticalCenter: parent.verticalCenter; AtlasIcon { anchors.centerIn: parent; name: "check"; width: 22; height: 22; strokeColor: theme.green } }
             Column {
                 width: parent.width - 60; anchors.verticalCenter: parent.verticalCenter; spacing: 4
                 Text { width: parent.width; text: root.toastTitle; color: theme.ink; font.pixelSize: 16; font.bold: true; elide: Text.ElideRight }

@@ -12,12 +12,12 @@ Rectangle {
     AtlasTheme { id: theme }
     readonly property var sections: [
         {key: "home", label: "Sistem", hint: "Genel ayarlar", icon: "settings"},
-        {key: "display", label: "Görünüm", hint: "Ekran ve boyut", icon: "screen-draw"},
+        {key: "display", label: "Görünüm", hint: "Ekran ve boyut", icon: "display"},
         {key: "network", label: "Ağ", hint: "Wi-Fi ve Ethernet", icon: "network"},
         {key: "sound", label: "Ses", hint: "Çıkış ve açılış", icon: "volume"},
         {key: "access", label: "Erişilebilirlik", hint: "Kalem ve dokunma", icon: "pen"},
         {key: "about", label: "Hakkında", hint: "Sistem bilgileri", icon: "help"},
-        {key: "developer", label: "Geliştirici", hint: "Güvenli tanılama", icon: "settings"}
+        {key: "developer", label: "Geliştirici", hint: "Güvenli tanılama", icon: "developer"}
     ]
     Flickable {
         anchors.fill: parent; anchors.margins: 10

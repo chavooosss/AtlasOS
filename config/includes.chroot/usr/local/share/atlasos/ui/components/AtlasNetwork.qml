@@ -87,7 +87,7 @@ Rectangle {
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 10
                             Row { width: parent.width; height: 50; spacing: 12
                                 Rectangle { width: 45; height: 45; radius: 12; color: theme.atlasBlue
-                                    AtlasIcon { anchors.centerIn: parent; name: "network"; width: 27; height: 27; strokeColor: "white" } }
+                                    AtlasIcon { anchors.centerIn: parent; name: "wifi"; width: 27; height: 27; strokeColor: "white" } }
                                 Column { width: parent.width - wifiSwitch.width - 65; anchors.verticalCenter: parent.verticalCenter; spacing: 3
                                     Text { text: "Wi-Fi"; color: theme.ink; font.pixelSize: 21; font.bold: true }
                                     Text { width: parent.width; text: atlasNetwork.wifiRadioAvailable ? (atlasNetwork.wifiEnabled ? "Kablosuz ağ açık" : "Kablosuz ağ kapalı") : "Denetleyici bulunamadı"; color: theme.muted; font.pixelSize: 13; elide: Text.ElideRight }
@@ -104,7 +104,7 @@ Rectangle {
                             ListView { width: parent.width; height: parent.height - 194; clip: true; model: atlasNetwork.networks; spacing: 4
                                 delegate: Rectangle { required property var modelData; width: ListView.view.width; height: 47; radius: 9; color: modelData.active ? theme.atlasBlueSoft : theme.surfaceRaised
                                     Row { anchors.fill: parent; anchors.margins: 9; spacing: 9
-                                        AtlasIcon { anchors.verticalCenter: parent.verticalCenter; name: "network"; width: 23; height: 23; strokeColor: modelData.active ? theme.atlasBlue : theme.atlasNavy }
+                                        AtlasIcon { anchors.verticalCenter: parent.verticalCenter; name: "wifi"; width: 23; height: 23; strokeColor: modelData.active ? theme.atlasBlue : theme.atlasNavy }
                                         Text { anchors.verticalCenter: parent.verticalCenter; width: parent.width - join.width - 45; text: modelData.ssid || "Gizli ağ"; color: theme.ink; font.pixelSize: 14; font.bold: modelData.active; elide: Text.ElideRight }
                                         AtlasButton { id: join; anchors.verticalCenter: parent.verticalCenter; width: 108; height: 38; text: modelData.active ? "Bağlı" : "Bağlan"; variant: modelData.active ? "quiet" : "secondary"; enabled: !modelData.active && !atlasNetwork.busy && atlasNetwork.wifiEnabled; onClicked: modelData.security === "--" ? atlasNetwork.connectTo(modelData.ssid) : panel.requestPassword(modelData.ssid) }
                                     }
@@ -119,7 +119,7 @@ Rectangle {
                         Column { anchors.fill: parent; anchors.margins: 20; spacing: 12
                             Row { width: parent.width; height: 50; spacing: 12
                                 Rectangle { width: 45; height: 45; radius: 12; color: theme.atlasBlueSoft
-                                    AtlasIcon { anchors.centerIn: parent; name: "network"; width: 27; height: 27; strokeColor: theme.atlasNavy } }
+                                    AtlasIcon { anchors.centerIn: parent; name: "ethernet"; width: 27; height: 27; strokeColor: theme.atlasNavy } }
                                 Column { anchors.verticalCenter: parent.verticalCenter; spacing: 3
                                     Text { text: "Ethernet"; color: theme.ink; font.pixelSize: 21; font.bold: true }
                                     Text { text: "Kablolu ağ bağlantısı"; color: theme.muted; font.pixelSize: 13 }

@@ -29,6 +29,7 @@ The Google repository/key setup has been removed from active build configuration
 
 ## Fonts, icons, marks, and media
 
+- **Tabler Icons v3.49.0:** selected official outline SVGs are used for AtlasOS system UI functional icons. Copyright (c) 2020–2026 Paweł Kuna; MIT License. The upstream license notice is preserved in `config/includes.chroot/usr/local/share/atlasos/ui/icons/tabler/LICENSE.txt`. Source: [tabler/tabler-icons](https://github.com/tabler/tabler-icons), [license](https://tabler.io/license). SVG geometry remains upstream-authored; QML applies the active theme color at render time.
 - **Ubuntu Sans:** bundled font has the adjacent Ubuntu Font Licence 1.0 notice. Keep the notice wherever the font is redistributed; it is not under MIT.
 - **Adwaita/Papirus:** selected as Ubuntu packages, not known copied source assets. Use their installed package notices. Audit any future standalone copies.
 - **Atlas logo, boot art, and current UI/Plymouth artwork:** project-owner attested AI-generated and cleared for AtlasOS project distribution as recorded in the asset inventory; provider/model terms remain unknown and no exclusive-copyright claim is made. Startup audio remains excluded. See the [AI asset policy](ai-generated-assets.md).

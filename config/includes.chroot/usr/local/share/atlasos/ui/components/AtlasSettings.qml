@@ -75,7 +75,7 @@ Rectangle {
                             width: parent.width; columns: width >= 750 ? 2 : 1; spacing: 14
                             Repeater { model: [
                                 {title: "Ağ", icon: "network", value: panel.networkState, key: "network"},
-                                {title: "Görünüm", icon: "screen-draw", value: (panel.Window.window ? panel.Window.window.width : Screen.width) + " × " + (panel.Window.window ? panel.Window.window.height : Screen.height) + " mantıksal piksel", key: "display"},
+                                {title: "Görünüm", icon: "display", value: (panel.Window.window ? panel.Window.window.width : Screen.width) + " × " + (panel.Window.window ? panel.Window.window.height : Screen.height) + " mantıksal piksel", key: "display"},
                                 {title: "Ses", icon: "volume", value: panel.audioState, key: "sound"},
                                 {title: "Kalem ve dokunma", icon: "pen", value: panel.penState, key: "access"}
                             ]; delegate: Rectangle { required property var modelData
