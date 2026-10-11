@@ -16,7 +16,7 @@ bash iso/build-atlasos.sh --dry-run
 bash iso/build-atlasos.sh
 ```
 
-The base build stages are preflight, path validation, generated branding, live-build configuration, bootstrap, chroot, binary tree, UEFI boot image, embedded payload checksum generation, hybrid ISO packaging, and external checksums/build report. Live-build invokes `sudo` for its isolated workspace/chroot operations. The output contract reads the project-root `VERSION` (currently `0.6.3`) and defaults to `dist/AtlasOS-<version>/AtlasOS-<version>-live-amd64.iso`; set `ATLASOS_VERSION`, `ATLASOS_OUTPUT_DIR`, `ATLASOS_ISO_NAME`, or `ATLASOS_BUILD_DIR` to override it. Outputs must remain below `dist/`; build work must remain below project `build/` or the user's Linux cache workspace. In WSL, keep live-build work on a Linux ext4 filesystem; Windows-mounted filesystems cannot represent distinct case-sensitive archive names such as `pam.7.gz` and `PAM.7.gz`.
+The base build stages are preflight, path validation, tracked branding validation/reuse, live-build configuration, bootstrap, chroot, binary tree, UEFI boot image, embedded payload checksum generation, hybrid ISO packaging, and external checksums/build report. Live-build invokes `sudo` for its isolated workspace/chroot operations. The output contract reads the project-root `VERSION` (currently `0.6.3`) and defaults to `dist/AtlasOS-<version>/AtlasOS-<version>-live-amd64.iso`; set `ATLASOS_VERSION`, `ATLASOS_OUTPUT_DIR`, `ATLASOS_ISO_NAME`, or `ATLASOS_BUILD_DIR` to override it. Outputs must remain below `dist/`; build work must remain below project `build/` or the user's Linux cache workspace. In WSL, keep live-build work on a Linux ext4 filesystem; Windows-mounted filesystems cannot represent distinct case-sensitive archive names such as `pam.7.gz` and `PAM.7.gz`.
 
 **Important:** this entry point creates the base Live ISO. It does not, by itself, produce the integrated Atlas Boot Manager release. The validated 0.6.2 Phase 6C integration still consumes separately built frontend/backend EFI artifacts and is retained as an integration step in `atlas-boot/tools/build_phase6c_iso.sh`. That script emits a new candidate and refuses overwrite. Use a new output directory/name; never target the historical physical ISO.
 
@@ -67,3 +67,5 @@ For a candidate, inspect ISO9660, BIOS and UEFI El Torito entries, hybrid metada
 8. Save a sanitized build report, toolchain manifest and validation evidence alongside the candidate.
 
 Generated ISOs, EFI binaries, extracted filesystems, logs and QEMU captures belong in ignored `build/` or `dist/validation/`, not in ordinary source history. Git and GitHub remain outside this phase.
+
+Branding preparation is clean-clone safe: `iso/prepare-branding-assets.sh` validates and reuses the checked-in Atlas UI, Atlas OS, and Plymouth artwork. It does not require ignored `docs/assets/` JPG inputs and does not rewrite branding files during a build.
