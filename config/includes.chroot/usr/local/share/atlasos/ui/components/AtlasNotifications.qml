@@ -23,14 +23,18 @@ Rectangle {
             }
         }
         Rectangle { width: parent.width; height: 2; color: theme.atlasBlue }
-        Rectangle {
+        Item {
             visible: atlasAlerts.items.length === 0
-            width: parent.width; height: 178; radius: theme.radiusLarge
-            color: theme.surface; border.color: theme.borderSubtle
-            Column { anchors.centerIn: parent; spacing: 12
-                AtlasIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "bell"; width: 36; height: 36; strokeColor: theme.atlasBlue }
-                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Yeni bildirim yok"; color: theme.ink; font.pixelSize: 19; font.bold: true }
-                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Sistem bildirimleri burada görünür."; color: theme.muted; font.pixelSize: 14 }
+            width: parent.width; height: Math.max(178, parent.height - 149)
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width; height: 178; radius: theme.radiusLarge
+                color: theme.surface; border.color: theme.borderSubtle
+                Column { anchors.centerIn: parent; spacing: 12
+                    AtlasIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "bell"; width: 36; height: 36; strokeColor: theme.atlasBlue }
+                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Yeni bildirim yok"; color: theme.ink; font.pixelSize: 19; font.bold: true }
+                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Sistem bildirimleri burada görünür."; color: theme.muted; font.pixelSize: 14 }
+                }
             }
         }
         ListView {
