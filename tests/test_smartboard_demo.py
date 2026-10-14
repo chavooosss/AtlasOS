@@ -18,10 +18,20 @@ NETWORKMANAGER_VENDOR_POLICY_OVERRIDE = ROOT / "config/includes.chroot/etc/Netwo
 class SmartboardDemoTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        loader = importlib.machinery.SourceFileLoader("atlasos_ui_demo_test", str(UI))
-        spec = importlib.util.spec_from_loader(loader.name, loader)
-        cls.ui = importlib.util.module_from_spec(spec)
-        loader.exec_module(cls.ui)
+        cls.ui = None
+
+    def load_ui(self):
+        if self.ui is None:
+            loader = importlib.machinery.SourceFileLoader("atlasos_ui_demo_test", str(UI))
+            spec = importlib.util.spec_from_loader(loader.name, loader)
+            self.__class__.ui = importlib.util.module_from_spec(spec)
+            try:
+                loader.exec_module(self.__class__.ui)
+            except ModuleNotFoundError as error:
+                if error.name == "PySide6" or (error.name and error.name.startswith("PySide6.")):
+                    self.skipTest("PySide6 is required for the AtlasAudio runtime test")
+                raise
+        return self.ui
 
     def test_board_density_uses_real_viewport_and_material_cards_wrap(self):
         main = (COMPONENTS.parent / "Main.qml").read_text(encoding="utf-8")
@@ -65,7 +75,7 @@ class SmartboardDemoTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0, stdout="id 45, type PipeWire:Interface:Node")
             return SimpleNamespace(returncode=0, stdout="Volume: 0.40")
 
-        with patch.object(self.ui.subprocess, "run", side_effect=command) as run:
+        with patch.object(self.load_ui().subprocess, "run", side_effect=command) as run:
             audio = self.ui.AtlasAudio()
             self.assertEqual(audio.outputs[0]["name"], "HDMI Board")
             self.assertTrue(audio.outputs[0]["selected"])
