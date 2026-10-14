@@ -1,0 +1,26 @@
+// Permit only connection controls used by the AtlasOS Live network UI.
+// System-wide profile edits and other NetworkManager actions remain protected.
+polkit.addRule(function (action, subject) {
+    var allowed = [
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.wifi.scan",
+        "org.freedesktop.NetworkManager.enable-disable-wifi",
+        "org.freedesktop.NetworkManager.settings.modify.own"
+    ];
+    if (allowed.indexOf(action.id) === -1 ||
+        subject.user !== "atlas" || subject.active !== true || subject.local !== true) {
+        return polkit.Result.NOT_HANDLED;
+    }
+    try {
+        polkit.spawn(["/usr/bin/grep", "-Eq", "(^|[[:space:]])boot=casper([[:space:]]|$)", "/proc/cmdline"]);
+        var mountInfo = polkit.spawn(["/usr/bin/findmnt", "--noheadings", "--raw", "--mountpoint", "/rofs", "--output", "FSTYPE,OPTIONS"]).trim();
+        var fields = mountInfo.split(/\s+/);
+        if (fields.length !== 2 || fields[0] !== "squashfs" ||
+            fields[1].split(",").indexOf("ro") === -1) {
+            return polkit.Result.NOT_HANDLED;
+        }
+        return polkit.Result.YES;
+    } catch (error) {
+        return polkit.Result.NOT_HANDLED;
+    }
+});

@@ -312,10 +312,12 @@ chmod +x /etc/xdg/xfce4/xinitrc.d/50-atlasos-session-fix
 install -d -m 0755 /usr/share/polkit-1/actions /etc/polkit-1/rules.d
 chown root:root /usr/local/libexec/atlasos-install-google-chrome \
   /usr/share/polkit-1/actions/org.atlasos.install-google-chrome.policy \
-  /etc/polkit-1/rules.d/49-atlasos-live-chrome.rules
+  /etc/polkit-1/rules.d/49-atlasos-live-chrome.rules \
+  /etc/polkit-1/rules.d/50-atlasos-live-network.rules
 chmod 0755 /usr/local/libexec/atlasos-install-google-chrome
 chmod 0644 /usr/share/polkit-1/actions/org.atlasos.install-google-chrome.policy \
-  /etc/polkit-1/rules.d/49-atlasos-live-chrome.rules
+  /etc/polkit-1/rules.d/49-atlasos-live-chrome.rules \
+  /etc/polkit-1/rules.d/50-atlasos-live-network.rules
 
 # Refresh after applying the Casper sudoers restriction above.
 update-initramfs -u -k all

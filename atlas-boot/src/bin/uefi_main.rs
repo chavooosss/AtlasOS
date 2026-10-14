@@ -2,7 +2,7 @@
 #![no_main]
 
 use alloc::vec::Vec;
-use atlas_boot_manager::{Key, UiState, gop_mode_preferences, render};
+use atlas_boot_manager::{Key, UiState, gop_fallback_score, gop_mode_preferences, render};
 use core::time::Duration;
 use uefi::prelude::*;
 use uefi::proto::console::gop::{BltOp, BltPixel, GraphicsOutput, PixelFormat};
@@ -97,8 +97,10 @@ fn run() -> uefi::Result {
 fn present_frame(state: &UiState) -> uefi::Result {
     let handle = uefi::boot::get_handle_for_protocol::<GraphicsOutput>()?;
     let mut gop = uefi::boot::open_protocol_exclusive::<GraphicsOutput>(handle)?;
+    let mut selected_preferred = false;
     for (want_w, want_h) in gop_mode_preferences(preferred_mode()).into_iter().flatten() {
         if gop.current_mode_info().resolution() == (want_w, want_h) {
+            selected_preferred = true;
             break;
         }
         if let Some(mode) = gop
@@ -106,7 +108,23 @@ fn present_frame(state: &UiState) -> uefi::Result {
             .find(|mode| mode.info().resolution() == (want_w, want_h))
             && gop.set_mode(&mode).is_ok()
         {
+            selected_preferred = true;
             break;
+        }
+    }
+    if !selected_preferred {
+        if let Some(mode) = gop
+            .modes()
+            .filter(|mode| {
+                let (w, h) = mode.info().resolution();
+                w >= 640 && h >= 360 && w.saturating_mul(h) <= 16_777_216
+            })
+            .min_by_key(|mode| {
+                let (w, h) = mode.info().resolution();
+                gop_fallback_score(w, h)
+            })
+        {
+            let _ = gop.set_mode(&mode);
         }
     }
     let mode = gop.current_mode_info();

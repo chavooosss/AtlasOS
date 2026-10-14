@@ -96,7 +96,7 @@ Item {
                 }
             }
 
-            Row {
+            Flow {
                 width: parent.width
                 spacing: 8 * page.scaleFactor
                 Repeater {
@@ -132,12 +132,12 @@ Item {
                 }
             }
 
-            Row {
-                width: parent.width; spacing: 12 * page.scaleFactor
+            Column {
+                width: parent.width; spacing: 10 * page.scaleFactor
                 AtlasSearch {
                     id: search
-                    width: parent.width - categoryRow.implicitWidth - parent.spacing
-                    controlScale: page.boardMode ? 1.08 : page.scaleFactor
+                    width: parent.width
+                    controlScale: page.scaleFactor
                     placeholderText: "Ders, konu veya araç ara"
                     text: page.query
                     onTextEdited: page.query = text
@@ -145,11 +145,11 @@ Item {
                 }
                 Row {
                     id: categoryRow
-                    spacing: 5 * page.scaleFactor
+                    spacing: 8 * page.scaleFactor
                     Repeater {
                         model: [{key:"all",label:"Tümü"},{key:"favorites",label:"Sık"},{key:"recent",label:"Son"},{key:"local",label:"Cihaz"},{key:"web",label:"Web"}]
                         delegate: AtlasButton {
-                            text: modelData.label; controlScale: page.scaleFactor * 0.92
+                            text: modelData.label; controlScale: page.scaleFactor
                             checkable: true; checked: page.category === modelData.key
                             onClicked: page.category = modelData.key
                         }
@@ -171,7 +171,11 @@ Item {
                 Repeater {
                     model: page.visibleItems()
                     delegate: AtlasMaterialCard {
-                        width: Math.max(220 * page.scaleFactor, Math.min(330 * page.scaleFactor, (resourceFlow.width - 24 * page.scaleFactor) / 3))
+                        width: (page.boardMode && resourceFlow.width >= 1500) || (!page.boardMode && resourceFlow.width >= 1040)
+                            ? (resourceFlow.width - 2 * resourceFlow.spacing) / 3
+                            : resourceFlow.width >= 640
+                              ? (resourceFlow.width - resourceFlow.spacing) / 2
+                              : resourceFlow.width
                         title: modelData.title
                         detail: modelData.detail
                         iconName: modelData.icon

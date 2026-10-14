@@ -21,6 +21,19 @@ pub fn gop_mode_preferences(requested: Option<(usize, usize)>) -> [Option<(usize
     ]
 }
 
+/// Rank firmware modes when none of the preferred classroom modes exists.
+/// A near-16:9 mode avoids large white letterbox areas on wide panels.
+pub fn gop_fallback_score(width: usize, height: usize) -> (usize, usize) {
+    let ratio_error = width.saturating_mul(9).abs_diff(height.saturating_mul(16));
+    let aspect_per_mille =
+        ratio_error.saturating_mul(1000) / height.max(1).saturating_mul(16).max(1);
+    let area = width.saturating_mul(height);
+    (
+        aspect_per_mille,
+        1920usize.saturating_mul(1080).abs_diff(area),
+    )
+}
+
 pub const GLYPH_ATLAS_W: usize = 768;
 pub const LANDSCAPE_W: usize = 1672;
 pub const LANDSCAPE_H: usize = 275;
@@ -927,6 +940,12 @@ mod tests {
                 assert!(visible, "blank raster for {ch} in face {face}");
             }
         }
+    }
+
+    #[test]
+    fn gop_fallback_prefers_wide_firmware_mode_over_letterboxed_current_mode() {
+        assert!(gop_fallback_score(1600, 900) < gop_fallback_score(1920, 1200));
+        assert!(gop_fallback_score(1600, 900) < gop_fallback_score(1024, 768));
     }
 
     #[test]

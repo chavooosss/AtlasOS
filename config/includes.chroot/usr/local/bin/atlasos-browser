@@ -53,10 +53,40 @@ if [[ -z "${browser}" ]]; then
     --ok-label="Şartları inceledim · indir" \
     --cancel-label="Vazgeç" \
     --text="Google Chrome AtlasOS'a dahil edilmez. İstersen resmi Google Linux paketini indirip kurabilirsin.\n\nİndirmeden önce Google koşullarını incele:\nhttps://policies.google.com/terms\nhttps://www.google.com/chrome/terms/\n\nDevam düğmesi, Google'ın indirme koşulları kapsamında paketi istemen anlamına gelir. Chrome ilk açılışında gösterilen koşulları AtlasOS senin adına kabul etmez. Kurulum ayrıca Google'ın resmi güncelleme deposunu etkinleştirir."; then
-    if pkexec /usr/local/libexec/atlasos-install-google-chrome; then
-      :
+    # A private FIFO keeps the progress window independent of APT. Closing the
+    # window cannot cancel a package transaction or affect the privileged helper.
+    progress_dir="$(mktemp -d "${log_dir}/chrome-progress.XXXXXX")"
+    progress_fifo="${progress_dir}/events"
+    mkfifo -- "${progress_fifo}"
+    zenity --progress --pulsate --no-cancel --auto-close \
+      --title="AtlasOS · Google Chrome" --width=520 \
+      --text="Kurulum hazırlanıyor…" <"${progress_fifo}" >/dev/null 2>&1 &
+    progress_pid=$!
+    exec {progress_fd}<>"${progress_fifo}"
+    printf '# Kurulum hazırlanıyor…\n' >&"${progress_fd}"
+    set +e
+    pkexec /usr/local/libexec/atlasos-install-google-chrome 2>>"${log}" | while IFS= read -r line; do
+      case "${line}" in
+        ATLASOS_STAGE:download) printf '# Google Chrome indiriliyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:verify) printf '# İndirilen paket doğrulanıyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:index) printf '# Paket kaynakları güncelleniyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:install) printf '# Google Chrome kuruluyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:complete) printf '# Kurulum tamamlandı. Tarayıcı açılıyor…\n' >&"${progress_fd}" ;;
+        *) printf '%s\n' "${line}" >>"${log}" ;;
+      esac
+    done
+    status=${PIPESTATUS[0]}
+    set -e
+    if (( status == 0 )); then
+      printf '100\n' >&"${progress_fd}"
     else
-      status=$?
+      kill -TERM "${progress_pid}" 2>/dev/null || true
+    fi
+    exec {progress_fd}>&-
+    wait "${progress_pid}" 2>/dev/null || true
+    rm -f -- "${progress_fifo}"
+    rmdir -- "${progress_dir}"
+    if (( status != 0 )); then
       case "$status" in
         64) message="Chrome kurulum isteği geçersiz; kullanıcı argümanı kabul edilmiyor." ;;
         65) message="Google'dan indirilen paket doğrulanamadı. Chrome kurulmadı." ;;
