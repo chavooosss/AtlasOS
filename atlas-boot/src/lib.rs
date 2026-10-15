@@ -263,6 +263,48 @@ impl Canvas {
             (y1 as i64 - y0 as i64).clamp(0, i32::MAX as i64) as i32,
         )
     }
+    pub fn mapped_rect(&self, x: i32, y: i32, w: i32, h: i32) -> (usize, usize, usize, usize) {
+        let (x, y, w, h) = self.map_rect(x, y, w.max(0), h.max(0));
+        let left = x.clamp(0, self.width as i32) as usize;
+        let top = y.clamp(0, self.height as i32) as usize;
+        let right = (x as i64 + w as i64).clamp(left as i64, self.width as i64) as usize;
+        let bottom = (y as i64 + h as i64).clamp(top as i64, self.height as i64) as usize;
+        (left, top, right - left, bottom - top)
+    }
+    pub fn copy_region(&self, rect: (usize, usize, usize, usize)) -> Option<Vec<Color>> {
+        let (x, y, width, height) = rect;
+        if width == 0
+            || height == 0
+            || x.checked_add(width)? > self.width
+            || y.checked_add(height)? > self.height
+        {
+            return None;
+        }
+        let mut copy = Vec::new();
+        copy.try_reserve_exact(width.checked_mul(height)?).ok()?;
+        for row in y..y + height {
+            let start = row.checked_mul(self.width)?.checked_add(x)?;
+            copy.extend_from_slice(self.pixels.get(start..start + width)?);
+        }
+        Some(copy)
+    }
+    pub fn restore_region(&mut self, rect: (usize, usize, usize, usize), source: &[Color]) -> bool {
+        let (x, y, width, height) = rect;
+        if width == 0
+            || height == 0
+            || x.checked_add(width).map_or(true, |end| end > self.width)
+            || y.checked_add(height).map_or(true, |end| end > self.height)
+            || width.checked_mul(height) != Some(source.len())
+        {
+            return false;
+        }
+        for row in 0..height {
+            let start = (y + row) * self.width + x;
+            self.pixels[start..start + width]
+                .copy_from_slice(&source[row * width..(row + 1) * width]);
+        }
+        true
+    }
     pub fn clear(&mut self, c: Color) {
         self.pixels.fill(c);
     }
@@ -603,6 +645,10 @@ impl Canvas {
     }
 }
 
+pub fn render_base(width: usize, height: usize, selected: usize) -> Option<Canvas> {
+    render_content(width, height, selected)
+}
+
 pub fn render(
     width: usize,
     height: usize,
@@ -610,6 +656,27 @@ pub fn render(
     countdown: u32,
     status: Option<&str>,
 ) -> Option<Canvas> {
+    let mut canvas = render_base(width, height, selected)?;
+    draw_countdown(&mut canvas, countdown, status);
+    Some(canvas)
+}
+
+pub const COUNTDOWN_REGION: (i32, i32, i32, i32) = (1228, 828, 402, 66);
+
+pub fn draw_countdown(canvas: &mut Canvas, countdown: u32, status: Option<&str>) {
+    use tokens::*;
+    if let Some(msg) = status {
+        canvas.text(1238, 834, msg, [183, 211, 241, 255]);
+    } else {
+        let msg = countdown_message(countdown);
+        canvas.text(1238, 834, &msg, [183, 211, 241, 255]);
+    }
+    canvas.rounded(1238, 879, 374, 9, 5, [63, 98, 140, 255]);
+    let fill = (countdown.min(10) as i32 * 374 / 10).max(0);
+    canvas.rounded(1238, 879, fill, 9, 5, CYAN);
+}
+
+fn render_content(width: usize, height: usize, selected: usize) -> Option<Canvas> {
     use tokens::*;
     let mut c = Canvas::new(width, height)?;
     // Full-HD-first light canvas with subtle Atlas-blue organic shapes.
@@ -787,15 +854,6 @@ pub fn render(
     c.text(638, 850, "Esc", WHITE);
     c.text(708, 850, "Başlangıç seçeneğine dön", [221, 237, 255, 255]);
     c.rect(1188, 835, 1, 44, [130, 169, 209, 255]);
-    if let Some(msg) = status {
-        c.text(1238, 834, msg, [183, 211, 241, 255]);
-    } else {
-        let msg = countdown_message(countdown);
-        c.text(1238, 834, &msg, [183, 211, 241, 255]);
-    }
-    c.rounded(1238, 879, 374, 9, 5, [63, 98, 140, 255]);
-    let fill = (countdown.min(10) as i32 * 374 / 10).max(0);
-    c.rounded(1238, 879, fill, 9, 5, CYAN);
     // Date/time shown only when populated by firmware runtime and validated by caller.
     Some(c)
 }
@@ -1126,6 +1184,35 @@ mod tests {
         assert!(!s.boot_in_progress);
         assert!(!s.take_boot_request());
         assert_eq!(s.message, Some("Bu seçenek bu prototipte kullanılamıyor."));
+    }
+
+    #[test]
+    fn countdown_refresh_changes_only_its_cached_region() {
+        let mut canvas = render_base(1920, 1080, 0).unwrap();
+        let rect = canvas.mapped_rect(
+            COUNTDOWN_REGION.0,
+            COUNTDOWN_REGION.1,
+            COUNTDOWN_REGION.2,
+            COUNTDOWN_REGION.3,
+        );
+        let base_region = canvas.copy_region(rect).unwrap();
+        let base_frame = canvas.pixels.clone();
+        draw_countdown(&mut canvas, 10, None);
+        let ten_seconds = canvas.copy_region(rect).unwrap();
+        assert!(canvas.restore_region(rect, &base_region));
+        draw_countdown(&mut canvas, 9, None);
+        let nine_seconds = canvas.copy_region(rect).unwrap();
+        assert_ne!(ten_seconds, nine_seconds);
+        let (left, top, width, height) = rect;
+        for (index, (original, updated)) in base_frame.iter().zip(&canvas.pixels).enumerate() {
+            let x = index % canvas.width;
+            let y = index / canvas.width;
+            let inside = x >= left && x < left + width && y >= top && y < top + height;
+            if !inside {
+                assert_eq!(original, updated, "countdown redraw touched pixel {index}");
+            }
+        }
+        assert!(!canvas.restore_region(rect, &[]));
     }
 
     #[test]
