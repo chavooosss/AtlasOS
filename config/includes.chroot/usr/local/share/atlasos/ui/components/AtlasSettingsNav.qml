@@ -5,6 +5,8 @@ Rectangle {
     id: navigation
     property string selected: "home"
     property bool compact: false
+    property bool boardMode: false
+    property real density: 1.0
     signal sectionRequested(string key)
     color: theme.surfaceRaised
     border.color: theme.borderSubtle
@@ -27,13 +29,13 @@ Rectangle {
             Repeater { model: navigation.sections
                 delegate: Rectangle {
                     required property var modelData
-                    width: menu.width; height: navigation.compact ? 62 : 74; radius: theme.radiusMedium
+                    width: menu.width; height: (navigation.compact ? 62 : 74) * navigation.density; radius: theme.radiusMedium
                     color: navigation.selected === modelData.key ? theme.atlasBlueSoft : "transparent"
                     Rectangle { visible: navigation.selected === modelData.key; width: 4; height: parent.height - 14; x: 0; y: 7; radius: 2; color: theme.atlasBlue }
-                    AtlasIcon { x: 15; anchors.verticalCenter: parent.verticalCenter; width: 25; height: 25; name: modelData.icon; strokeColor: navigation.selected === modelData.key ? theme.atlasBlue : theme.atlasNavy }
-                    Column { x: 51; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 60; spacing: 3
-                        Text { width: parent.width; text: modelData.label; color: navigation.selected === modelData.key ? theme.atlasBlue : theme.ink; font.pixelSize: navigation.compact ? 15 : 16; font.bold: true; elide: Text.ElideRight }
-                        Text { width: parent.width; text: modelData.hint; color: theme.muted; font.pixelSize: 12; elide: Text.ElideRight }
+                    AtlasIcon { x: 15; anchors.verticalCenter: parent.verticalCenter; width: 25 * navigation.density; height: width; name: modelData.icon; strokeColor: navigation.selected === modelData.key ? theme.atlasBlue : theme.atlasNavy }
+                    Column { x: 15 + 36 * navigation.density; anchors.verticalCenter: parent.verticalCenter; width: parent.width - x - 9; spacing: 3
+                        Text { width: parent.width; text: modelData.label; color: navigation.selected === modelData.key ? theme.atlasBlue : theme.ink; font.pixelSize: (navigation.compact ? 15 : 16) * navigation.density; font.bold: true; elide: Text.ElideRight }
+                        Text { width: parent.width; text: modelData.hint; color: theme.muted; font.pixelSize: 12 * navigation.density; elide: Text.ElideRight }
                     }
                     MouseArea { anchors.fill: parent; onClicked: navigation.sectionRequested(modelData.key) }
                 }

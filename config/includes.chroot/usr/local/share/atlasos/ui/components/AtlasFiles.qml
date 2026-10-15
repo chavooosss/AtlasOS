@@ -7,6 +7,7 @@ Item {
     id: files
     objectName: "filesView"
     property bool boardMode: false
+    property real uiScale: 1.0
     property string kind: ""
     property url homeFolder: "file:///home/atlas"
     property url booksFolder: "file:///home/atlas/Ders%20Kitaplari"
@@ -109,10 +110,10 @@ Item {
     Column {
         anchors.fill: parent; anchors.margins: files.width < 1450 ? 16 : 24; spacing: 14
         Row { width: parent.width; height: files.width < 1450 ? 72 : 84; spacing: 16
-            AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 45; height: 45; name: "folder"; strokeColor: theme.atlasNavy }
+            AtlasIcon { anchors.verticalCenter: parent.verticalCenter; width: 45 * files.uiScale; height: width; name: "folder"; strokeColor: theme.atlasNavy }
             Column { anchors.verticalCenter: parent.verticalCenter; spacing: 3
-                Text { text: files.kind === "books" ? "Ders Kitapları" : files.kind === "library" ? "Kaynak Rafı" : files.kind === "pdf" ? "PDF Seç" : files.kind === "presentation" ? "Sunum Seç" : files.kind === "video" ? "Video Seç" : "Dosyalar"; color: theme.ink; font.pixelSize: 30; font.bold: true }
-                Text { text: "Gerçek klasör ve dosyalarınızı görüntüleyin."; color: theme.muted; font.pixelSize: 14 }
+                Text { text: files.kind === "books" ? "Ders Kitapları" : files.kind === "library" ? "Kaynak Rafı" : files.kind === "pdf" ? "PDF Seç" : files.kind === "presentation" ? "Sunum Seç" : files.kind === "video" ? "Video Seç" : "Dosyalar"; color: theme.ink; font.pixelSize: 30 * files.uiScale; font.bold: true }
+                Text { text: "Gerçek klasör ve dosyalarınızı görüntüleyin."; color: theme.muted; font.pixelSize: 14 * files.uiScale }
             }
         }
         Row {
@@ -124,18 +125,18 @@ Item {
                     Column { id: railItems; width: parent.width; spacing: 5
                         Text { x: 10; width: parent.width - 20; height: 34; verticalAlignment: Text.AlignVCenter; text: "KONUM"; color: theme.muted; font.pixelSize: 12; font.bold: true }
                         Repeater { model: files.locations; delegate: Rectangle { required property var modelData
-                            width: railItems.width; height: 50; radius: 9
+                            width: railItems.width; height: 50 * files.uiScale; radius: 9
                             property bool available: atlasFs.directoryExists(modelData.url)
                             color: files.currentFolder.toString() === modelData.url ? theme.atlasBlueSoft : "transparent"
-                            AtlasIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: modelData.icon; width: 22; height: 22; strokeColor: parent.available ? theme.atlasBlue : theme.disabledInk }
-                            Text { x: 46; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 54; text: modelData.label; color: parent.available ? theme.ink : theme.disabledInk; font.pixelSize: 14; font.bold: files.currentFolder.toString() === modelData.url; elide: Text.ElideRight }
+                            AtlasIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: modelData.icon; width: 22 * files.uiScale; height: width; strokeColor: parent.available ? theme.atlasBlue : theme.disabledInk }
+                            Text { x: 12 + 30 * files.uiScale; anchors.verticalCenter: parent.verticalCenter; width: parent.width - x - 8; text: modelData.label; color: parent.available ? theme.ink : theme.disabledInk; font.pixelSize: 14 * files.uiScale; font.bold: files.currentFolder.toString() === modelData.url; elide: Text.ElideRight }
                             MouseArea { anchors.fill: parent; enabled: parent.available; onClicked: files.navigate(modelData.url) }
                         } }
                         Rectangle { width: parent.width; height: 1; color: theme.borderSubtle }
                         Text { x: 10; height: 30; text: "CİHAZLAR"; color: theme.muted; font.pixelSize: 12; font.bold: true; verticalAlignment: Text.AlignVCenter }
-                        Rectangle { width: parent.width; height: 50; radius: 9; color: files.isUsbLocation() ? theme.atlasBlueSoft : "transparent"
+                        Rectangle { width: parent.width; height: 50 * files.uiScale; radius: 9; color: files.isUsbLocation() ? theme.atlasBlueSoft : "transparent"
                             AtlasIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: "folder"; width: 22; height: 22; strokeColor: theme.atlasBlue }
-                            Text { x: 46; anchors.verticalCenter: parent.verticalCenter; text: "USB Bellek"; color: theme.ink; font.pixelSize: 14 }
+                            Text { x: 12 + 30 * files.uiScale; anchors.verticalCenter: parent.verticalCenter; text: "USB Bellek"; color: theme.ink; font.pixelSize: 14 * files.uiScale }
                             MouseArea { anchors.fill: parent; onClicked: files.chooseUsb() }
                         }
                     }
@@ -201,16 +202,16 @@ Item {
                     x: 12; y: 93; width: parent.width - detailsPane.width - 23; height: parent.height - 105
                     clip: true; model: folderModel
                     cellWidth: width >= 760 ? width / 4 : width >= 550 ? width / 3 : width / 2
-                    cellHeight: files.width < 1450 ? 118 : 135
+                    cellHeight: files.boardMode ? (files.width < 1450 ? 148 : 166) : (files.width < 1450 ? 118 : 135)
                     delegate: Rectangle {
                         property bool matchesSearch: files.searchText.length === 0 || fileName.toLocaleLowerCase().indexOf(files.searchText) >= 0
                         width: grid.cellWidth - 9; height: grid.cellHeight - 9
                         visible: matchesSearch; radius: theme.radiusMedium
                         color: files.selectedFile.url === fileUrl.toString() ? theme.atlasBlueSoft : hover.containsMouse ? theme.surfaceMuted : theme.surface
                         border.color: files.selectedFile.url === fileUrl.toString() ? theme.atlasBlue : "transparent"
-                        AtlasIcon { anchors.horizontalCenter: parent.horizontalCenter; y: 12; width: 54; height: 54; name: fileIsDir ? "folder" : files.fileKind(fileName) === "pdf" ? "pdf" : files.fileKind(fileName) === "video" ? "video" : "file"; strokeColor: fileIsDir ? theme.atlasBlue : theme.atlasNavy }
-                        Text { x: 6; y: 72; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter; text: fileName; color: theme.ink; font.pixelSize: 14; font.bold: true; elide: Text.ElideRight }
-                        Text { x: 6; y: 94; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter; text: fileIsDir ? "Klasör" : files.formatBytes(fileSize); color: theme.muted; font.pixelSize: 12 }
+                        AtlasIcon { anchors.horizontalCenter: parent.horizontalCenter; y: 12; width: 54 * files.uiScale; height: width; name: fileIsDir ? "folder" : files.fileKind(fileName) === "pdf" ? "pdf" : files.fileKind(fileName) === "video" ? "video" : "file"; strokeColor: fileIsDir ? theme.atlasBlue : theme.atlasNavy }
+                        Text { x: 6; y: 16 + 54 * files.uiScale; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter; text: fileName; color: theme.ink; font.pixelSize: 14 * files.uiScale; font.bold: true; elide: Text.ElideRight }
+                        Text { x: 6; y: 40 + 54 * files.uiScale; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter; text: fileIsDir ? "Klasör" : files.formatBytes(fileSize); color: theme.muted; font.pixelSize: 12 * files.uiScale }
                         MouseArea { id: hover; anchors.fill: parent; hoverEnabled: true
                             onClicked: files.selectedFile = {name: fileName, url: fileUrl.toString(), directory: fileIsDir, size: fileSize, modified: fileModified ? Qt.formatDateTime(fileModified, "dd.MM.yyyy HH:mm") : ""}
                             onDoubleClicked: files.openItem({name: fileName, url: fileUrl.toString(), directory: fileIsDir})
@@ -222,10 +223,10 @@ Item {
                     x: 12; y: 93; width: parent.width - detailsPane.width - 23; height: parent.height - 105
                     clip: true; model: folderModel; spacing: 4
                     delegate: Rectangle { property bool matchesSearch: files.searchText.length === 0 || fileName.toLocaleLowerCase().indexOf(files.searchText) >= 0
-                        width: list.width; height: matchesSearch ? 58 : 0; visible: matchesSearch; radius: 8
+                        width: list.width; height: matchesSearch ? 58 * files.uiScale : 0; visible: matchesSearch; radius: 8
                         color: files.selectedFile.url === fileUrl.toString() ? theme.atlasBlueSoft : theme.surface
                         AtlasIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 28; height: 28; name: fileIsDir ? "folder" : "file"; strokeColor: theme.atlasBlue }
-                        Text { x: 51; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 135; text: fileName; color: theme.ink; font.pixelSize: 15; elide: Text.ElideRight }
+                        Text { x: 51; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 135; text: fileName; color: theme.ink; font.pixelSize: 15 * files.uiScale; elide: Text.ElideRight }
                         Text { anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: fileIsDir ? "Klasör" : files.formatBytes(fileSize); color: theme.muted; font.pixelSize: 12 }
                         MouseArea { anchors.fill: parent
                             onClicked: files.selectedFile = {name: fileName, url: fileUrl.toString(), directory: fileIsDir, size: fileSize, modified: fileModified ? Qt.formatDateTime(fileModified, "dd.MM.yyyy HH:mm") : ""}

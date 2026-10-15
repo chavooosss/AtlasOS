@@ -154,7 +154,7 @@ Rectangle {
                         id: lessonCard
                         width: scheduleColumn.width
                         property string lessonStatus: panel.lessonState(modelData, index)
-                        height: (lessonStatus === "current" ? 92 : 62) * panel.scaleFactor
+                        height: (lessonStatus === "current" ? 108 : 86) * panel.scaleFactor
                         radius: 10 * panel.scaleFactor
                         color: lessonStatus === "current" ? "#eaf7f4" : "#f7f9fb"
                         border.width: lessonStatus === "current" ? 2 : 1
@@ -185,7 +185,7 @@ Rectangle {
                                     Text { anchors.centerIn: parent; text: "Şu Anda"; color: theme.green; font.pixelSize: 11 * panel.scaleFactor; font.bold: true }
                                 }
                             }
-                            Text { width: parent.width; text: modelData.title; elide: Text.ElideRight; color: theme.ink; font.pixelSize: (lessonCard.lessonStatus === "current" ? 19 : 16) * panel.scaleFactor; font.bold: true }
+                            Text { width: parent.width; text: modelData.title; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight; color: theme.ink; font.pixelSize: (lessonCard.lessonStatus === "current" ? 19 : 16) * panel.scaleFactor; font.bold: true }
                             Text { width: parent.width; text: modelData.class; elide: Text.ElideRight; color: theme.muted; font.pixelSize: 14 * panel.scaleFactor; visible: lessonCard.lessonStatus === "current" }
                         }
                     }

@@ -29,13 +29,90 @@ for candidate in google-chrome-stable google-chrome chromium chromium-browser fi
   fi
 done
 
+proxy_env="none"
+for proxy_name in http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY; do
+  if [[ -n "${!proxy_name:-}" ]]; then
+    if [[ "${proxy_env}" == "none" ]]; then proxy_env="${proxy_name}"; else proxy_env+=",${proxy_name}"; fi
+  fi
+done
+system_proxy_mode="unknown"
+if command -v gsettings >/dev/null 2>&1; then
+  proxy_mode="$(gsettings get org.gnome.system.proxy mode 2>/dev/null || true)"
+  case "${proxy_mode}" in
+    *none*) system_proxy_mode="none" ;;
+    *manual*) system_proxy_mode="manual" ;;
+    *auto*) system_proxy_mode="auto" ;;
+  esac
+fi
+
 {
   echo "==== $(date -Is) ===="
   echo "URL: [redacted]"
   echo "DISPLAY: ${DISPLAY:-}"
   echo "XDG_SESSION_TYPE: ${XDG_SESSION_TYPE:-}"
   echo "Selected browser: ${browser:-none}"
+  echo "Proxy configuration: env=${proxy_env} desktop_mode=${system_proxy_mode}"
 } >>"${log}" 2>&1
+
+probe_https() {
+  local label="$1" probe_url="$2" result status category
+  if ! command -v curl >/dev/null 2>&1; then
+    printf '%s=unavailable\n' "${label}"
+    return 0
+  fi
+  if result="$(curl --silent --show-error --head --location --max-redirs 3 \
+      --connect-timeout 2 --max-time 4 --output /dev/null \
+      --write-out '%{http_code}' -- "${probe_url}" 2>/dev/null)"; then
+    printf '%s=ok http=%s\n' "${label}" "${result:-unknown}"
+    return 0
+  else
+    status="$?"
+  fi
+  case "${status}" in
+    5|97) category="proxy" ;;
+    6) category="dns" ;;
+    7|28) category="connection" ;;
+    35|51|58|60|77) category="tls" ;;
+    *) category="network" ;;
+  esac
+  printf '%s=failed category=%s curl_exit=%s\n' "${label}" "${category}" "${status}"
+}
+
+diagnose_web_access() {
+  local probe_url="$1" probe_dir atlas_result example_result atlas_kind example_kind
+  [[ "${probe_url}" == https://* ]] || probe_url="${ATLAS_HOME_URL}"
+  probe_dir="$(mktemp -d "${log_dir}/web-probe.XXXXXX")" || return 0
+  probe_https atlas "${probe_url}" >"${probe_dir}/atlas" &
+  local atlas_pid=$!
+  probe_https example "https://example.com/" >"${probe_dir}/example" &
+  local example_pid=$!
+  wait "${atlas_pid}" || true
+  wait "${example_pid}" || true
+  atlas_result="$(cat "${probe_dir}/atlas")"
+  example_result="$(cat "${probe_dir}/example")"
+  printf 'HTTPS probe: %s; %s\n' "${atlas_result}" "${example_result}" >>"${log}"
+  atlas_kind="${atlas_result#*=}"
+  example_kind="${example_result#*=}"
+  rm -f -- "${probe_dir}/atlas" "${probe_dir}/example"
+  rmdir -- "${probe_dir}" 2>/dev/null || true
+
+  if [[ "${atlas_kind}" == ok* && "${example_kind}" == ok* ]]; then
+    return 0
+  fi
+  if [[ "${atlas_kind}" == ok* && "${example_kind}" == failed* ]]; then
+    show_error "AtlasOS sayfasına erişim doğrulandı; bağımsız HTTPS testi başarısız oldu. Chrome yine açılacak. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed* && "${example_kind}" == ok* ]]; then
+    show_error "Genel HTTPS erişimi var, ancak AtlasOS sayfası bu testte açılamadı. Chrome yine açılacak. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=proxy* || "${example_kind}" == failed\ category=proxy* ]]; then
+    show_error "Web erişim tanısı bir proxy bağlantı sorunu buldu. Chrome yine açılacak; proxy değerleri kaydedilmedi. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=dns* || "${example_kind}" == failed\ category=dns* ]]; then
+    show_error "Web erişim tanısı DNS ad çözümlemesini doğrulayamadı. Chrome yine açılacak; ağ ve DNS bağlantısını kontrol edin. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=tls* || "${example_kind}" == failed\ category=tls* ]]; then
+    show_error "Web erişim tanısı TLS/sertifika el sıkışmasında hata buldu. Güvenlik doğrulaması devre dışı bırakılmadı. Ayrıntılar: ${log}"
+  else
+    show_error "HTTPS bağlantısı doğrulanamadı. Chrome yine açılacak; bağlantı, ağ geçidi ve DNS durumunu kontrol edin. Ayrıntılar: ${log}"
+  fi
+}
 
 if [[ -z "${browser}" ]]; then
   if ! command -v zenity >/dev/null 2>&1; then
@@ -53,10 +130,40 @@ if [[ -z "${browser}" ]]; then
     --ok-label="Şartları inceledim · indir" \
     --cancel-label="Vazgeç" \
     --text="Google Chrome AtlasOS'a dahil edilmez. İstersen resmi Google Linux paketini indirip kurabilirsin.\n\nİndirmeden önce Google koşullarını incele:\nhttps://policies.google.com/terms\nhttps://www.google.com/chrome/terms/\n\nDevam düğmesi, Google'ın indirme koşulları kapsamında paketi istemen anlamına gelir. Chrome ilk açılışında gösterilen koşulları AtlasOS senin adına kabul etmez. Kurulum ayrıca Google'ın resmi güncelleme deposunu etkinleştirir."; then
-    if pkexec /usr/local/libexec/atlasos-install-google-chrome; then
-      :
+    # A private FIFO keeps the progress window independent of APT. Closing the
+    # window cannot cancel a package transaction or affect the privileged helper.
+    progress_dir="$(mktemp -d "${log_dir}/chrome-progress.XXXXXX")"
+    progress_fifo="${progress_dir}/events"
+    mkfifo -- "${progress_fifo}"
+    zenity --progress --pulsate --no-cancel --auto-close \
+      --title="AtlasOS · Google Chrome" --width=520 \
+      --text="Kurulum hazırlanıyor…" <"${progress_fifo}" >/dev/null 2>&1 &
+    progress_pid=$!
+    exec {progress_fd}<>"${progress_fifo}"
+    printf '# Kurulum hazırlanıyor…\n' >&"${progress_fd}"
+    set +e
+    pkexec /usr/local/libexec/atlasos-install-google-chrome 2>>"${log}" | while IFS= read -r line; do
+      case "${line}" in
+        ATLASOS_STAGE:download) printf '# Google Chrome indiriliyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:verify) printf '# İndirilen paket doğrulanıyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:index) printf '# Paket kaynakları güncelleniyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:install) printf '# Google Chrome kuruluyor…\n' >&"${progress_fd}" ;;
+        ATLASOS_STAGE:complete) printf '# Kurulum tamamlandı. Tarayıcı açılıyor…\n' >&"${progress_fd}" ;;
+        *) printf '%s\n' "${line}" >>"${log}" ;;
+      esac
+    done
+    status=${PIPESTATUS[0]}
+    set -e
+    if (( status == 0 )); then
+      printf '100\n' >&"${progress_fd}"
     else
-      status=$?
+      kill -TERM "${progress_pid}" 2>/dev/null || true
+    fi
+    exec {progress_fd}>&-
+    wait "${progress_pid}" 2>/dev/null || true
+    rm -f -- "${progress_fifo}"
+    rmdir -- "${progress_dir}"
+    if (( status != 0 )); then
       case "$status" in
         64) message="Chrome kurulum isteği geçersiz; kullanıcı argümanı kabul edilmiyor." ;;
         65) message="Google'dan indirilen paket doğrulanamadı. Chrome kurulmadı." ;;
@@ -95,8 +202,10 @@ if ! flock -w 20 9; then
   exit 75
 fi
 
+diagnose_web_access "${url}"
+
 for attempt in 1 2; do
-  if "${browser}" --new-window "${url}" >>"${log}" 2>&1; then
+  if "${browser}" --new-window "${url}" >/dev/null 2>&1; then
     exit 0
   else
     status=$?
