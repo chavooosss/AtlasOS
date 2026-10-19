@@ -2,7 +2,7 @@
 
 ## Current source line: 0.6.4
 
-The root `VERSION` file is now `0.6.4`. This is a Development Preview source candidate carrying forward the 0.6.3 UI/boot work and adding the user-triggered official external-browser installation path. The 0.6.4 ISO is not yet built or validated in this source state, and there is no public 0.6.4 binary download, tag, or GitHub Release.
+The root `VERSION` file is `0.6.4`. This is a Development Preview source candidate carrying forward the 0.6.3 UI/boot work and adding the user-triggered official external-browser installation path. The project owner selected the pre-existing `AtlasOS-0.6.4-Smartboard-Demo-amd64.iso` as the current local USB-test reference (3,273,457,664 bytes; SHA-256 `491c2a931a3f8ecfe75f0bd25bf6d1c10fac7670b978b491310ed90b1d677587`). Its embedded build identity is 20261014-22:26, and its source commit is not recorded; it is not evidence that the current `main` source was built or validated. Exact-image physical validation is pending. There is no public 0.6.4 binary download, tag, or GitHub Release. See the [selected image record](../validation/selected-0.6.4-smartboard-demo.md).
 
 The project owner reports one successful UEFI Live USB test on a Casper Excalibur G870 for the exact 0.6.3 RC1 image. That physical result and the prior 0.6.3 OVMF/QEMU boot are historical evidence for 0.6.3 only; they do not validate a 0.6.4 build. See the [0.6.3 artifact-bound record](../validation/physical-0.6.3-rc1.md).
 
