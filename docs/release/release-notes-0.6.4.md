@@ -2,7 +2,7 @@
 
 ## Overview
 
-AtlasOS 0.6.4 is the current source candidate for an education-focused Ubuntu-based Live Linux environment. It continues the smartboard interface work, system UI polish, and UEFI boot improvements from the 0.6.3 development line. A clean 0.6.4 test ISO is intended to be prepared separately; these notes do not claim that an ISO has passed physical validation or is available for download.
+AtlasOS 0.6.4 is the current Development Preview source candidate for an education-focused Ubuntu-based Live Linux environment. It continues the smartboard interface work, system UI polish, and UEFI boot improvements from the 0.6.3 development line. The project owner selected a pre-existing local Smartboard Demo image for manual USB testing: 3,273,457,664 bytes, SHA-256 `491c2a931a3f8ecfe75f0bd25bf6d1c10fac7670b978b491310ed90b1d677587`. Its source commit is not recorded, so it is not represented as a build of current `main`. See the [artifact record](../validation/selected-0.6.4-smartboard-demo.md). It has not been published as a download.
 
 ## Highlights
 
