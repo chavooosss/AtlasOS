@@ -18,6 +18,15 @@ diag = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diag)
 
 
+def write_valid_bundle(path, extra_payload=b"generated diagnostic archive"):
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("README.txt", "AtlasOS diagnostics test bundle\n")
+        bundle.writestr("summary.json", '{"schema_version": 1}\n')
+        bundle.writestr("collection/manifest.json", '{"files": []}\n')
+        bundle.writestr("test/payload.bin", extra_payload)
+    return pathlib.Path(path)
+
+
 class StorageFixtures:
     def __init__(self, root):
         self.root = pathlib.Path(root)
@@ -140,12 +149,52 @@ class StorageSafetyTests(unittest.TestCase):
             self.fixtures.device("sdb", "8:16", usb=True)
             self.fixtures.boot_mount()
             self.fixtures.mount("8:16", usb, mount_id="46", source="/dev/sdb")
-            archive = pathlib.Path(volatile) / "AtlasOS-Diagnostics-0.6.2-20261003T100000Z.zip"
-            archive.write_bytes(b"generated diagnostic archive")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100000Z.zip")
             result = self.fixtures.policy().export(archive, usb, "46")
             self.assertEqual(pathlib.Path(result).read_bytes(), archive.read_bytes())
+            self.assertTrue(zipfile.is_zipfile(result))
+            self.assertFalse(any(path.name.endswith(".partial") for path in pathlib.Path(usb).iterdir()))
             with self.assertRaises(PermissionError):
                 self.fixtures.policy().authorize_destination("/dev/sdb")
+
+    def test_empty_or_invalid_bundle_is_rejected_before_usb_file_is_created(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="47", source="/dev/sdb")
+            for payload in (b"", b"not a zip archive"):
+                archive = pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100000Z.zip"
+                archive.write_bytes(payload)
+                with self.assertRaises(ValueError):
+                    self.fixtures.policy().export(archive, usb, "47")
+            self.assertEqual(list(pathlib.Path(usb).iterdir()), [])
+
+    def test_incomplete_usb_copy_never_publishes_a_final_zip(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="47", source="/dev/sdb")
+            archive = write_valid_bundle(
+                pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100001Z.zip",
+                b"x" * (2 * 1024 * 1024),
+            )
+            policy = self.fixtures.policy()
+            original = policy.authorize_destination
+            calls = 0
+
+            def interrupt_copy(destination, expected_mount_id=None):
+                nonlocal calls
+                calls += 1
+                if calls == 3:
+                    raise PermissionError("simulated USB removal")
+                return original(destination, expected_mount_id)
+
+            with patch.object(policy, "authorize_destination", side_effect=interrupt_copy):
+                with self.assertRaises(PermissionError):
+                    policy.export(archive, usb, "47")
+            self.assertEqual(list(pathlib.Path(usb).iterdir()), [])
 
     def test_live_usb_unknown_and_unmounted_internal_are_never_exportable(self):
         self.fixtures.device("sda", "8:0", usb=True)
@@ -163,8 +212,8 @@ class StorageSafetyTests(unittest.TestCase):
             self.fixtures.device("sdb", "8:16", usb=True)
             self.fixtures.boot_mount()
             self.fixtures.mount("8:16", usb, mount_id="48", source="/dev/sdb")
-            archive = pathlib.Path(volatile) / "AtlasOS-Diagnostics-0.6.2-20261003T100000Z.zip"
-            archive.write_bytes(b"x" * 1024 * 1024)
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100000Z.zip",
+                                         b"x" * 1024 * 1024)
             policy = self.fixtures.policy()
             original = policy.authorize_destination
             calls = 0
@@ -185,8 +234,7 @@ class StorageSafetyTests(unittest.TestCase):
             self.fixtures.device("sdb", "8:16", usb=True)
             self.fixtures.boot_mount()
             self.fixtures.mount("8:16", usb, mount_id="49", source="/dev/sdb")
-            archive = pathlib.Path(volatile) / "AtlasOS-Diagnostics-0.6.2-20261003T100000Z.zip"
-            archive.write_bytes(b"bundle")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100000Z.zip")
             with patch.object(diag.shutil, "disk_usage", return_value=SimpleNamespace(free=1)):
                 with self.assertRaises(OSError):
                     self.fixtures.policy().export(archive, usb, "49")
@@ -333,6 +381,7 @@ class DiagnosticsCollectorTests(unittest.TestCase):
             progress = []
             result = collector.collect_all(lambda label, value: progress.append((label, value)))
             self.assertTrue(result["ok"])
+            self.assertGreater(result["size_bytes"], 0)
             self.assertTrue(pathlib.Path(result["bundle"]).is_relative_to(volatile))
             self.assertEqual([value for _, value in progress], [10, 25, 40, 60, 78, 92])
             with zipfile.ZipFile(result["bundle"]) as bundle:

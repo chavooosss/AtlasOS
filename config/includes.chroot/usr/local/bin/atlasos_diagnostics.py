@@ -7,6 +7,7 @@ whose removable USB ancestry and mount source have been revalidated.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -276,8 +277,10 @@ class StorageSafetyPolicy:
         return mount
 
     def export(self, archive: Path, destination: str, expected_mount_id=None):
-        if not archive.is_file() or archive.is_symlink() or archive.stat().st_size > MAX_BUNDLE_BYTES:
+        if (not archive.is_file() or archive.is_symlink() or archive.stat().st_size <= 0
+                or archive.stat().st_size > MAX_BUNDLE_BYTES):
             raise ValueError("Tanılama paketi geçersiz veya boyut sınırını aşıyor.")
+        self._validate_bundle(archive)
         mount = self.authorize_destination(destination, expected_mount_id)
         target_dir = Path(destination)
         usage = shutil.disk_usage(target_dir)
@@ -285,18 +288,20 @@ class StorageSafetyPolicy:
         if usage.free < required:
             raise OSError("USB bellekte tanılama paketi için yeterli boş alan yok.")
         name = archive.name
-        if not re.fullmatch(r"AtlasOS-Diagnostics-0\.6\.2-[0-9TZ-]+\.zip", name):
+        if not re.fullmatch(rf"AtlasOS-Diagnostics-{re.escape(VERSION)}-[0-9TZ-]+\.zip", name):
             raise ValueError("Yalnızca oluşturulmuş AtlasOS tanılama arşivleri dışa aktarılabilir.")
-        output = target_dir / name
         dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
         dir_fd = os.open(target_dir, dir_flags)
+        partial_name = f".{name}.{os.urandom(8).hex()}.partial"
         file_fd = None
         try:
             # Pin writes to the already-open verified mount root. This prevents a
             # later path/symlink swap from redirecting data onto another mount.
             self.authorize_destination(destination, mount["id"])
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-            file_fd = os.open(name, flags, 0o600, dir_fd=dir_fd)
+            file_fd = os.open(partial_name, flags, 0o600, dir_fd=dir_fd)
+            digest = hashlib.sha256()
+            copied = 0
             with os.fdopen(file_fd, "wb", closefd=True) as dest, archive.open("rb") as src:
                 file_fd = None
                 while True:
@@ -304,21 +309,75 @@ class StorageSafetyPolicy:
                     chunk = src.read(1024 * 1024)
                     if not chunk:
                         break
-                    dest.write(chunk)
+                    digest.update(chunk)
+                    view = memoryview(chunk)
+                    while view:
+                        written = dest.write(view)
+                        if not written:
+                            raise OSError("Tanılama paketi USB belleğe tam yazılamadı.")
+                        copied += written
+                        view = view[written:]
                 dest.flush()
                 os.fsync(dest.fileno())
+            if copied != archive.stat().st_size:
+                raise OSError("Tanılama paketi USB belleğe eksik aktarıldı.")
+            verify_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            verify_fd = os.open(partial_name, verify_flags, dir_fd=dir_fd)
+            with os.fdopen(verify_fd, "rb") as copied_file:
+                copied_digest = hashlib.sha256()
+                while True:
+                    chunk = copied_file.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    copied_digest.update(chunk)
+                if copied_digest.digest() != digest.digest():
+                    raise OSError("USB bellekteki tanılama paketi kaynakla eşleşmiyor.")
+                copied_file.seek(0)
+                self._validate_bundle_stream(copied_file)
             self.authorize_destination(destination, mount["id"])
-            return str(output)
+            try:
+                os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                raise FileExistsError("Aynı adlı tanılama paketi USB bellekte zaten var; üzerine yazılmadı.")
+            # Publish only after a full-size, hash-matched, readable ZIP exists.
+            # The temporary file is in the same USB directory, so rename is atomic.
+            os.rename(partial_name, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
+            self.authorize_destination(destination, mount["id"])
+            return str(target_dir / name)
         except Exception:
             try:
                 if file_fd is not None:
                     os.close(file_fd)
-                os.unlink(name, dir_fd=dir_fd)
+                os.unlink(partial_name, dir_fd=dir_fd)
             except OSError:
                 pass
             raise
         finally:
             os.close(dir_fd)
+
+    @staticmethod
+    def _validate_bundle_stream(stream):
+        stream.seek(0)
+        with zipfile.ZipFile(stream, "r") as bundle:
+            infos = bundle.infolist()
+            names = {info.filename for info in infos}
+            required = {"README.txt", "summary.json", "collection/manifest.json"}
+            if not required.issubset(names) or sum(info.file_size for info in infos) > MAX_BUNDLE_BYTES:
+                raise ValueError("Tanılama ZIP içeriği eksik veya boyut sınırını aşıyor.")
+            bad_member = bundle.testzip()
+            if bad_member is not None:
+                raise ValueError("Tanılama ZIP içeriği bozuk.")
+        stream.seek(0)
+
+    @classmethod
+    def _validate_bundle(cls, archive: Path):
+        try:
+            with archive.open("rb") as stream:
+                cls._validate_bundle_stream(stream)
+        except (OSError, zipfile.BadZipFile, EOFError) as exc:
+            raise ValueError("Tanılama arşivi boş veya okunamıyor.") from exc
 
 
 class DiagnosticsCollector:
@@ -673,7 +732,7 @@ class DiagnosticsCollector:
                 except Exception:
                     shutil.rmtree(root, ignore_errors=True)
                     raise
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         summary = self.system_snapshot()
         report(*stages[0])
         cpu = self.cpu_snapshot()
@@ -751,14 +810,31 @@ class DiagnosticsCollector:
         self._write_text(root, "README.txt", "AtlasOS 0.6.4 Tanılama Paketi\nBu paket salt okunur sistem gözlemlerini içerir. Dahili depolama korunur.\nGünlükler sınırlı ve sanitize edilmiştir; manifest.json ayrıntıları listeler.\n")
         report(*stages[5])
         archive = root.parent / f"AtlasOS-Diagnostics-{VERSION}-{timestamp}.zip"
-        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=5) as bundle:
-            for path in sorted(root.rglob("*")):
-                if path.is_file() and not path.is_symlink():
-                    bundle.write(path, path.relative_to(root))
-        if archive.stat().st_size > MAX_BUNDLE_BYTES:
-            archive.unlink()
+        partial_archive = None
+        try:
+            fd, partial_text = tempfile.mkstemp(prefix=".atlasos-diagnostics-", suffix=".partial", dir=root.parent)
+            partial_archive = Path(partial_text)
+            os.close(fd)
+            with zipfile.ZipFile(partial_archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=5) as bundle:
+                for path in sorted(root.rglob("*")):
+                    if path.is_file() and not path.is_symlink():
+                        bundle.write(path, path.relative_to(root))
+            with partial_archive.open("rb") as stream:
+                if partial_archive.stat().st_size <= 0 or partial_archive.stat().st_size > MAX_BUNDLE_BYTES:
+                    raise OSError("Tanılama paketi boş veya boyut sınırını aşıyor; yayımlanmadı.")
+                StorageSafetyPolicy._validate_bundle_stream(stream)
+                os.fsync(stream.fileno())
+            # Publish the final .zip name only when its central directory and
+            # required contents have passed validation. Hard-link creation is
+            # atomic on the private /run tmpfs and refuses to overwrite.
+            os.link(partial_archive, archive)
+            partial_archive.unlink()
+            partial_archive = None
+        except Exception:
+            if partial_archive is not None:
+                partial_archive.unlink(missing_ok=True)
             shutil.rmtree(root, ignore_errors=True)
-            raise OSError("Tanılama paketi boyut sınırını aşıyor; /run üzerinde tutulmadı.")
+            raise
         shutil.rmtree(root, ignore_errors=True)
         return {"ok": True, "bundle": str(archive), "bundle_name": archive.name,
                 "size_bytes": archive.stat().st_size, "summary": summary, "storage": summary["storage"],

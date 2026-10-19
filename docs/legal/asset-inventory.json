@@ -22,34 +22,6 @@
       "notes": "Script source only. Generated frames remain separately review-gated."
     },
     {
-      "path": "assets/branding/vectorize_seedream_logo.py",
-      "type": "source asset-generation script",
-      "origin": "AtlasOS project source; reviewed as project-authored tooling",
-      "owner_status": "OWNED",
-      "license": "MIT for project-authored documentation/tool source only",
-      "redistribution_status": "CLEARED",
-      "notes": "Script source only. The source image and derived logo are not cleared by this code license."
-    },
-    {
-      "path": "assets/branding/atlasos-logo-seedream-master.png",
-      "type": "AI-generated Atlas logo source",
-      "origin": "Project-owner attested AI-generated for AtlasOS; see docs/legal/asset-provenance-attestation.md",
-      "owner_status": "NEEDS-REVIEW",
-      "license": "No standalone asset license assigned; root MIT does not apply to asset copyright or upstream/provider terms",
-      "redistribution_status": "AI-GENERATED-CLEARED",
-      "notes": "Owner attests it was AI-generated for AtlasOS and directs project publication. Filename containing Seedream is not treated as proof of provider. No obvious third-party mark found in visual review.",
-      "creation_method": "AI-GENERATED",
-      "provider": "UNKNOWN / NOT RECORDED",
-      "tool_or_model": "UNKNOWN / NOT RECORDED",
-      "approx_creation_date": "UNKNOWN / NOT RECORDED",
-      "project_purpose": "AI-generated Atlas logo source",
-      "human_editing": "Project tracing/export/cropping/rasterization is recorded where applicable; prompt history and complete edit history are unavailable.",
-      "source_reference_inputs": "Project-owner attestation; source lineage described per asset.",
-      "provider_terms_status": "NOT VERIFIED; provider is not reliably identified",
-      "third_party_content_status": "NO OBVIOUS THIRD-PARTY CONTENT FOUND in limited visual review; not a legal guarantee",
-      "publication_status": "CLEARED FOR ATLASOS PROJECT DISTRIBUTION ONLY; no exclusive copyright claim"
-    },
-    {
       "path": "assets/branding/atlasos-emblem-traced.svg",
       "type": "Derived vector trace of AI-generated Atlas logo",
       "origin": "Project-owner attested AI-generated for AtlasOS; see docs/legal/asset-provenance-attestation.md",

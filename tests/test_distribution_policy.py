@@ -47,13 +47,14 @@ class DistributionPolicyTests(unittest.TestCase):
         self.assertIn("atlas-boot/fonts/source/UbuntuSans.ttf", candidates)
         self.assertIn("atlas-boot/fonts/source/LICENSE-Ubuntu.txt", candidates)
         for required_art in (
-            "assets/branding/atlasos-logo-seedream-master.png",
             "assets/branding/atlasos-emblem-traced.svg",
             "atlas-boot/assets/source/atlas-boot-landscape.png",
             "atlas-boot/assets/generated/landscape.rgba",
             "config/includes.chroot/usr/share/plymouth/themes/atlasos/atlas-logo.png",
         ):
             self.assertIn(required_art, candidates)
+        self.assertNotIn("assets/branding/atlasos-logo-seedream-master.png", candidates)
+        self.assertNotIn("assets/branding/atlasos-logo-seedream-master.png", {a["path"] for a in inventory["assets"]})
         self.assertNotIn("atlas-boot/assets/source/phase5-reference.png", candidates)
         self.assertNotIn("config/includes.chroot/usr/local/share/atlasos/ui/sounds/atlasos-startup.wav", candidates)
         for asset in inventory["assets"]:
