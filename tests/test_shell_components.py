@@ -225,7 +225,7 @@ class ShellComponentsTests(unittest.TestCase):
         self.assertIn("AtlasHomeDashboard {", main_source)
         self.assertNotIn("QT_SCALE_FACTOR=1.25", (UI_PATH.parents[1] / "bin/atlasos-session").read_text(encoding="utf-8"))
         self.assertIn('atlasPreferences.displayMode === "board"', main_source)
-        self.assertIn("root.width < 1440 ? 1.10 : 1.25", main_source)
+        self.assertIn("Math.min(root.width / 1920, root.height / 1080) * 1.32", main_source)
         self.assertIn("anchors.bottom: footer.top", (UI_PATH.parents[1] / "share/atlasos/ui/components/AtlasSidebar.qml").read_text(encoding="utf-8"))
         self.assertIn("touchscreenDetected", main_source)
         self.assertIn('Qt.locale("tr_TR")', header_source)

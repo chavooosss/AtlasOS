@@ -22,7 +22,7 @@ Window {
     // A smartboard is normally viewed from several metres away. Scale its
     // controls and typography as a coordinated density, including at the
     // common 1366 logical-pixel framebuffer used by some 1080p panels.
-    property real interfaceScale: root.boardMode ? (root.width < 1440 ? 1.10 : 1.25) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
+    property real interfaceScale: root.boardMode ? Math.min(2.64, Math.max(root.width < 1440 ? 1.16 : 1.32, Math.min(root.width / 1920, root.height / 1080) * 1.32)) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
     property string workspaceTitle: ""
     property bool notificationsOpen: false
     property var lessons: []
@@ -353,6 +353,8 @@ Window {
 
     AtlasPowerMenu {
         id: powerDialog
+        boardMode: root.boardMode
+        density: root.boardMode ? root.interfaceScale : 1.0
         onActionRequested: function(action) { atlasPower.run(action) }
     }
     AtlasHeader {
@@ -374,7 +376,7 @@ Window {
     AtlasSidebar {
         id: sidebar
         visible: ["dashboard", "settings", "network", "files"].indexOf(root.viewMode) >= 0
-        width: root.boardMode ? (root.width < 1440 ? Math.max(142, Math.min(154, root.width * 0.10)) : Math.max(166, Math.min(190, root.width * 0.096))) : Math.max(112, Math.min(144, root.width * 0.086))
+        width: root.boardMode ? Math.min(root.width * 0.15, 144 * root.interfaceScale) : Math.max(112, Math.min(144, root.width * 0.086))
         anchors.top: header.bottom; anchors.bottom: parent.bottom; anchors.left: parent.left
         currentPage: root.viewMode === "settings" || root.viewMode === "network" ? "settings" : root.viewMode === "files" ? "books" : root.page
         itemScale: root.interfaceScale
@@ -388,7 +390,7 @@ Window {
     LessonPanel {
         id: lessonPanel
         visible: root.viewMode === "dashboard"
-        width: root.boardMode ? (root.width < 1440 ? Math.min(390, Math.max(350, root.width * 0.285)) : Math.min(520, Math.max(370, root.width * 0.30))) : Math.min(452, Math.max(300, root.width * 0.27))
+        width: root.boardMode ? Math.min(root.width * 0.31, 400 * root.interfaceScale) : Math.min(452, Math.max(300, root.width * 0.27))
         anchors.top: header.bottom; anchors.bottom: parent.bottom; anchors.right: parent.right
         lessons: root.lessons
         timeline: root.scheduleTimeline
@@ -498,6 +500,7 @@ Window {
         AtlasFiles {
             id: filesView
             boardMode: root.boardMode
+            uiScale: root.boardMode ? root.interfaceScale : 1.0
             visible: root.viewMode === "files"
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
@@ -537,6 +540,7 @@ Window {
         AtlasNetwork {
             visible: root.viewMode === "network"
             boardMode: root.boardMode
+            density: root.boardMode ? root.interfaceScale : 1.0
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
             onSettingsSectionRequested: function(key) {
@@ -551,6 +555,7 @@ Window {
             anchors.left: parent.left; anchors.right: parent.right
       networkState: root.systemStatus.network
       audioState: root.systemStatus.audio
+      audioController: atlasAudio
       penState: root.systemStatus.pen
       errorText: root.settingsError
       startupSoundEnabled: atlasPreferences ? atlasPreferences.startupSoundEnabled : true
@@ -558,6 +563,7 @@ Window {
       displayMode: atlasPreferences ? atlasPreferences.displayMode : "auto"
       touchscreenDetected: atlasPreferences ? atlasPreferences.touchscreenDetected : false
       boardMode: root.boardMode
+      density: root.boardMode ? root.interfaceScale : 1.0
       onNetworkRequested: root.openTool("network")
       onStartupSoundChanged: function(enabled) { atlasPreferences.setStartupSoundEnabled(enabled) }
       onDisplayModeRequested: function(mode) { atlasPreferences.setDisplayMode(mode) }
@@ -569,27 +575,27 @@ Window {
             anchors.left: parent.left; anchors.right: parent.right
             color: theme.canvas
             Column {
-                anchors.fill: parent; anchors.margins: 30; spacing: 20
-                Text { text: "Sistem Kaynakları"; color: theme.ink; font.pixelSize: 28; font.bold: true }
-                Text { text: "Canlı ölçüm · yaklaşık iki saniyede bir yenilenir"; color: theme.muted; font.pixelSize: 15 }
+                anchors.fill: parent; anchors.margins: 30 * root.interfaceScale; spacing: 20 * root.interfaceScale
+                Text { text: "Sistem Kaynakları"; color: theme.ink; font.pixelSize: 28 * root.interfaceScale; font.bold: true }
+                Text { text: "Canlı ölçüm · yaklaşık iki saniyede bir yenilenir"; color: theme.muted; font.pixelSize: 15 * root.interfaceScale }
                 Row {
-                    width: parent.width; spacing: 16
+                    width: parent.width; spacing: 16 * root.interfaceScale
                     Repeater {
                         model: [
                             {title: "İşlemci", value: Math.round(atlasResources.cpuPercent) + "%", ratio: atlasResources.cpuPercent, hint: "Anlık kullanım"},
                             {title: "Bellek", value: atlasResources.memoryUsedMb + " / " + atlasResources.memoryTotalMb + " MB", ratio: atlasResources.memoryPercent, hint: Math.round(atlasResources.memoryPercent) + "% kullanılıyor"}
                         ]
                         delegate: Rectangle {
-                            width: (parent.width - 16) / 2; height: 170; radius: 10; color: "white"; border.color: theme.line
+                            width: (parent.width - parent.spacing) / 2; height: 220 * root.interfaceScale; radius: 10; color: "white"; border.color: theme.line
                             Column {
-                                anchors.fill: parent; anchors.margins: 20; spacing: 12
-                                Text { text: modelData.title; color: theme.muted; font.pixelSize: 16 }
-                                Text { text: modelData.value; color: theme.ink; font.pixelSize: 28; font.bold: true }
+                                anchors.fill: parent; anchors.margins: 20 * root.interfaceScale; spacing: 12 * root.interfaceScale
+                                Text { text: modelData.title; color: theme.muted; font.pixelSize: 16 * root.interfaceScale }
+                                Text { text: modelData.value; color: theme.ink; font.pixelSize: 28 * root.interfaceScale; font.bold: true }
                                 Rectangle {
-                                    width: parent.width; height: 10; radius: 5; color: "#e6edf1"
+                                    width: parent.width; height: 10 * root.interfaceScale; radius: 5; color: "#e6edf1"
                                     Rectangle { width: parent.width * Math.max(0, Math.min(1, Number(modelData.ratio) / 100)); height: parent.height; radius: 5; color: theme.green }
                                 }
-                                Text { text: modelData.hint; color: theme.muted; font.pixelSize: 13 }
+                                Text { text: modelData.hint; color: theme.muted; font.pixelSize: 13 * root.interfaceScale }
                             }
                         }
                     }

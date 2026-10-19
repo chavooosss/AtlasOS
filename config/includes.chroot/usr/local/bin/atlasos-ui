@@ -334,6 +334,10 @@ class AtlasNetwork(QObject):
             self._message = "Yeniden denenecek Ethernet aygıtı bulunamadı."
             self.changed.emit()
             return
+        if str(self._wired.get("state", "")).casefold() in {"unmanaged", "yönetilmeyen"}:
+            self._message = "Ethernet aygıtı NetworkManager tarafından yönetilmiyor. IP/DHCP denenemedi; aygıt yönetimi ve sürücü durumu incelenmeli."
+            self.changed.emit()
+            return
         self._run("wired-connect", ["device", "connect", device])
 
     @Property(str, notify=changed)
@@ -520,7 +524,14 @@ class AtlasNetwork(QObject):
         error = bytes(self._process.readAllStandardError()).decode("utf-8", "replace")
         self._busy = False
         if exit_code != 0:
-            self._message = ("Bağlantı yetkisi yok. Aktif oturumu ve ağ izinlerini kontrol edin." if "Insufficient privileges" in error else error.strip() or "Ağ işlemi tamamlanamadı.")
+            if "Insufficient privileges" in error:
+                self._message = "Bağlantı yetkisi yok. Aktif Live oturumunu ve NetworkManager izinlerini kontrol edin."
+            elif "not managed" in error.casefold() or "unmanaged" in error.casefold():
+                self._message = "Aygıt NetworkManager tarafından yönetilmiyor; DHCP işlemi başlatılamadı."
+            elif "no suitable device" in error.casefold() or "carrier" in error.casefold():
+                self._message = "Uygun Ethernet aygıtı veya kablo sinyali bulunamadı."
+            else:
+                self._message = error.strip() or "Ağ işlemi tamamlanamadı."
         elif self._action in ("wifi-on", "wifi-off"):
             self._wifi_enabled = self._action == "wifi-on"
             self._wifi_radio_available = True
@@ -806,6 +817,10 @@ class AtlasAudio(QObject):
         self._available = False
         self._volume = 0
         self._muted = False
+        self._outputs = []
+        self._selected_output = -1
+        self._output_status = "Ses çıkışları okunuyor"
+        self.refreshOutputs()
         self.refresh()
 
     @Property(bool, notify=changed)
@@ -819,6 +834,62 @@ class AtlasAudio(QObject):
     @Property(bool, notify=changed)
     def muted(self):
         return self._muted
+
+    @Property("QVariantList", notify=changed)
+    def outputs(self):
+        return self._outputs
+
+    @Property(str, notify=changed)
+    def outputStatus(self):
+        return self._output_status
+
+    @Slot()
+    def refreshOutputs(self):
+        try:
+            result = subprocess.run(["pw-dump"], capture_output=True, text=True, timeout=5, check=False)
+            nodes = json.loads(result.stdout) if result.returncode == 0 else []
+            default = subprocess.run(["wpctl", "inspect", "@DEFAULT_AUDIO_SINK@"],
+                                     capture_output=True, text=True, timeout=3, check=False)
+            match = re.search(r"^id\s+(\d+),", default.stdout, re.MULTILINE)
+            selected = int(match.group(1)) if default.returncode == 0 and match else -1
+            outputs = []
+            for node in nodes:
+                props = node.get("info", {}).get("props", {})
+                if props.get("media.class") != "Audio/Sink":
+                    continue
+                node_id = node.get("id")
+                if not isinstance(node_id, int) or node_id <= 0:
+                    continue
+                name = str(props.get("node.description") or props.get("node.nick") or
+                           props.get("node.name") or f"Çıkış {node_id}")
+                outputs.append({"id": node_id, "name": name, "selected": node_id == selected,
+                                "virtual": props.get("node.name") == "auto_null" or "dummy" in name.casefold()})
+            self._outputs = outputs
+            self._selected_output = selected
+            real_outputs = [item for item in outputs if not item["virtual"]]
+            self._output_status = ("Gerçek ses çıkışı algılanmadı; bağlantı ve ses profili kontrol edilmeli."
+                                   if not real_outputs else
+                                   "Varsayılan çıkış: " + next((item["name"] for item in outputs if item["selected"]),
+                                                               "seçilemedi"))
+        except (OSError, subprocess.TimeoutExpired, ValueError, TypeError):
+            self._outputs = []
+            self._selected_output = -1
+            self._output_status = "Ses çıkışları okunamadı; PipeWire/WirePlumber durumunu kontrol edin."
+        self.changed.emit()
+
+    @Slot(int)
+    def selectOutput(self, node_id):
+        if not any(item["id"] == node_id and not item["virtual"] for item in self._outputs):
+            return
+        try:
+            subprocess.run(["wpctl", "set-default", str(node_id)],
+                           capture_output=True, timeout=3, check=True)
+        except (OSError, subprocess.SubprocessError):
+            self._output_status = "Ses çıkışı seçilemedi."
+            self.changed.emit()
+            return
+        self.refreshOutputs()
+        self.refresh()
 
     def _read(self):
         try:
@@ -1115,7 +1186,7 @@ def main():
     if page:
         engine.rootObjects()[0].setProperty("page", page)
     if view:
-        engine.rootObjects()[0].openTool(view)
+        engine.rootObjects()[0].openTool(view, True)
     material_filter = os.environ.get("ATLASOS_VALIDATE_MATERIAL_FILTER", "")
     if material_filter in {"favorites", "recent", "local", "web"}:
         if material_filter == "favorites":

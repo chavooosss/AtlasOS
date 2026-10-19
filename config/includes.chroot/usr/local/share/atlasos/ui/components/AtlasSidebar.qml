@@ -39,8 +39,8 @@ Rectangle {
                 color: currentPage === modelData.page ? "#285b8a" : "transparent"
                 opacity: modelData.active ? 1 : 0.55
                 Rectangle { width: 4; height: 45 * sidebar.itemScale; radius: 2; color: "#8edfd1"; visible: currentPage === modelData.page; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter }
-                AtlasIcon { id: menuIcon; anchors.horizontalCenter: parent.horizontalCenter; y: 14 * sidebar.itemScale; width: 28 * sidebar.itemScale; height: 28 * sidebar.itemScale; name: modelData.icon }
-                Text { width: parent.width - 8; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 12 * sidebar.itemScale; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: "white"; font.pixelSize: 13 * sidebar.itemScale; font.bold: currentPage === modelData.page; elide: Text.ElideRight }
+                AtlasIcon { id: menuIcon; anchors.horizontalCenter: parent.horizontalCenter; y: Math.max(6 * sidebar.itemScale, (parent.height - height - menuLabel.implicitHeight - 8 * sidebar.itemScale) / 2); width: 28 * sidebar.itemScale; height: 28 * sidebar.itemScale; name: modelData.icon }
+                Text { id: menuLabel; width: parent.width - 8; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 7 * sidebar.itemScale; horizontalAlignment: Text.AlignHCenter; text: modelData.label; color: "white"; font.pixelSize: 13 * sidebar.itemScale; font.bold: currentPage === modelData.page; elide: Text.ElideRight }
                 MouseArea { anchors.fill: parent; enabled: modelData.active; onClicked: sidebar.pageSelected(modelData.page) }
             }
         }

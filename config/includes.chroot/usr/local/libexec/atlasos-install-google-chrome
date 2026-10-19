@@ -53,11 +53,13 @@ work_dir="$("$MKTEMP" -d /var/tmp/atlasos-chrome-install.XXXXXX)" || fail 69 'Co
 trap '"$RM" -rf -- "$work_dir"' EXIT
 package_file="${work_dir}/google-chrome-stable_current_amd64.deb"
 
+printf '%s\n' 'ATLASOS_STAGE:download'
 if ! "$CURL" --fail --location --silent --show-error --proto '=https' --tlsv1.2 \
   --connect-timeout 20 --max-time 240 "$PACKAGE_URL" --output "$package_file"; then
   fail 69 'The official Google Chrome package could not be downloaded.'
 fi
 
+printf '%s\n' 'ATLASOS_STAGE:verify'
 if ! package_name="$("$DPKG_DEB" --field "$package_file" Package)" \
   || ! package_arch="$("$DPKG_DEB" --field "$package_file" Architecture)" \
   || ! package_version="$("$DPKG_DEB" --field "$package_file" Version)"; then
@@ -67,12 +69,16 @@ if [[ "$package_name" != google-chrome-stable || "$package_arch" != amd64 || ! "
   fail 65 'The downloaded package is not a valid stable amd64 Google Chrome package.'
 fi
 
+printf '%s\n' 'ATLASOS_STAGE:index'
 if ! "$APT_GET" update; then
   fail 70 'Package index refresh failed; Chrome was not installed.'
 fi
+printf '%s\n' 'ATLASOS_STAGE:install'
 if ! DEBIAN_FRONTEND=noninteractive "$APT_GET" install -y --no-install-recommends "$package_file"; then
   fail 70 'Chrome package installation failed.'
 fi
 if [[ ! -x /usr/bin/google-chrome-stable ]]; then
   fail 71 'Installation finished without the expected Chrome launcher.'
 fi
+
+printf '%s\n' 'ATLASOS_STAGE:complete'
