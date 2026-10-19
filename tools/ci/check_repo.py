@@ -59,6 +59,7 @@ PATH_LEAKS = re.compile(r"(?i)(?:C:\\Users\\[^\\\s]+\\|C:\\[^\\\s]+\\|/home/[^/\
 FORBIDDEN_ROOTS = {"build", "dist", "binary", "chroot", "target"}
 PRIVATE_PARTS = {".codex", ".cursor", ".agents", "__pycache__", "node_modules"}
 GENERATED_PARTS = {"dist", "binary", "chroot", "target", "diagnostics", "raw-diagnostics"}
+SOURCE_DIAGNOSTICS_ALLOWLIST = {"scripts/diagnostics/check-chrome-network.sh"}
 FORBIDDEN_SUFFIXES = {
     ".iso", ".img", ".efi", ".squashfs", ".qcow2", ".vdi", ".vmdk",
     ".vhd", ".vhdx", ".ova", ".ovf", ".vbox", ".vbox-prev", ".vmem",
@@ -132,7 +133,8 @@ def check_file_policy(files: list[str], errors: list[str]) -> None:
             fail(f"generated root path must not be in Git: {relative}", errors)
         if parts & PRIVATE_PARTS:
             fail(f"private/cache directory must not be in Git: {relative}", errors)
-        if root not in FORBIDDEN_ROOTS and parts & GENERATED_PARTS:
+        if (root not in FORBIDDEN_ROOTS and parts & GENERATED_PARTS
+                and relative not in SOURCE_DIAGNOSTICS_ALLOWLIST):
             fail(f"generated/raw-data directory must not be in Git: {relative}", errors)
         if suffix in FORBIDDEN_SUFFIXES:
             fail(f"generated/release artifact must not be in Git: {relative}", errors)

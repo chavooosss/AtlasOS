@@ -14,10 +14,19 @@ class RepositoryPolicyTests(unittest.TestCase):
 
     def test_generated_and_release_artifact_paths_are_rejected(self):
         errors = []
-        check_file_policy(["dist/candidate.iso", "atlas-boot/target/release/App.efi"], errors)
+        check_file_policy([
+            "dist/candidate.iso",
+            "atlas-boot/target/release/App.efi",
+            "tmp/diagnostics/report.json",
+        ], errors)
         self.assertTrue(any("generated root" in item for item in errors))
         self.assertTrue(any("generated/release artifact" in item for item in errors))
         self.assertTrue(any("generated/raw-data directory" in item for item in errors))
+
+    def test_checked_in_diagnostics_source_script_is_allowed(self):
+        errors = []
+        check_file_policy(["scripts/diagnostics/check-chrome-network.sh"], errors)
+        self.assertEqual(errors, [])
 
     def test_hard_file_size_threshold_is_50_mib(self):
         errors = []
