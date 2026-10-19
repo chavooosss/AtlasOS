@@ -40,7 +40,7 @@ jobs:
           cache-dependency-path: website/package-lock.json
       - name: Configure Pages metadata
         if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Install website dependencies
         run: npm ci
         working-directory: website
