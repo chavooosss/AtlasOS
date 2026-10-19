@@ -18,6 +18,7 @@ Start with the product overview and current status, then choose the engineering 
 
 ## Validation and release
 
+- [Selected 0.6.4 Smartboard Demo test image](validation/selected-0.6.4-smartboard-demo.md) — exact local artifact identity and validation boundary.
 - [0.6.3 RC physical validation](validation/physical-0.6.3-rc1.md) — owner-reported, one-device result.
 - [Historical 0.6.2 physical validation](validation/physical-0.6.2.md).
 - [Release integrity](validation/release-integrity.md) — embedded-manifest caveat for the integrated historical ISO.
