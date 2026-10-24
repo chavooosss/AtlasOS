@@ -22,7 +22,7 @@ Item {
         anchors.bottom: parent.bottom
         height: width * (dashboard.boardMode ? 108 : 126) / 1052
         source: "../branding/atlas-dashboard-footer.png"
-        fillMode: Image.PreserveAspectFit
+        fillMode: Image.PreserveAspectCrop
         smooth: true
         opacity: dashboard.boardMode ? 0.76 : 0.96
         z: 0

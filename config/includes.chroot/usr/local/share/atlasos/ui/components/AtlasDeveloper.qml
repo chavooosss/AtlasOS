@@ -5,13 +5,14 @@ import "../theme"
 Item {
     id: page
     property bool boardMode: false
+    property real density: 1.0
     property var diagnostics: atlasDiagnostics
     property var snapshotData: ({})
     property var exportTargets: []
     property string selectedTargetId: ""
     property string notice: ""
     property bool noticeError: false
-    implicitHeight: content.implicitHeight
+    implicitHeight: content.implicitHeight * page.density
 
     AtlasTheme { id: theme }
 
@@ -36,7 +37,9 @@ Item {
 
     Column {
         id: content
-        width: page.width
+        width: page.width / page.density
+        scale: page.density
+        transformOrigin: Item.TopLeft
         spacing: page.boardMode ? 22 : 18
 
         Column {
@@ -44,7 +47,7 @@ Item {
             Text { text: "Atlas Geliştirici Merkezi"; color: theme.ink; font.family: theme.fontFamily; font.pixelSize: theme.typePageTitle; font.bold: true }
             Text {
                 width: parent.width
-                text: "Salt okunur sistem bilgileri, güvenli performans anlık görüntüleri ve fiziksel boot kanıtları."
+                text: "Salt okunur sistem, ses çıkış rotası, NetworkManager ve HTTPS/TLS tanılamaları; güvenli performans anlık görüntüleri ve boot kanıtları."
                 color: theme.muted; font.family: theme.fontFamily; font.pixelSize: theme.typeSecondary; wrapMode: Text.WordWrap
             }
         }
@@ -123,11 +126,42 @@ Item {
         }
 
         Rectangle {
+            width: parent.width; height: page.boardMode ? 228 : 208
+            radius: theme.radiusCard; color: theme.surface; border.color: theme.line
+            Column {
+                anchors.fill: parent; anchors.margins: 18; spacing: 10
+                Text { text: "Tahta üzerinde gözlenen sonuçlar · İsteğe bağlı"; color: theme.ink; font.pixelSize: 18; font.bold: true }
+                Text {
+                    width: parent.width
+                    text: "Önce Ayarlar → Ses bölümünde kısa testi çalıştırın. Chrome'u yeniden deneyip yalnızca ekranda gördüğünüz hata türünü seçin; adres kaydedilmez."
+                    color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap
+                }
+                Row {
+                    width: parent.width; spacing: 12
+                    AtlasComboBox {
+                        width: (parent.width - parent.spacing) / 2
+                        model: ["Hoparlör: test edilmedi", "Hoparlörden ses duyuldu", "Hoparlörden ses çıkmadı"]
+                        currentIndex: diagnostics.fieldObservations.speaker_test
+                            ? ["not_tested", "audible", "silent"].indexOf(diagnostics.fieldObservations.speaker_test.value) : 0
+                        onActivated: diagnostics.setFieldObservation("speaker_test", index)
+                    }
+                    AtlasComboBox {
+                        width: (parent.width - parent.spacing) / 2
+                        model: ["Chrome: test edilmedi", "Sayfa açıldı", "ERR_CONNECTION_RESET", "CERT_AUTHORITY_INVALID", "Başka hata"]
+                        currentIndex: diagnostics.fieldObservations.chrome_navigation
+                            ? ["not_tested", "loaded", "connection_reset", "certificate_authority_invalid", "other_error"].indexOf(diagnostics.fieldObservations.chrome_navigation.value) : 0
+                        onActivated: diagnostics.setFieldObservation("chrome_navigation", index)
+                    }
+                }
+            }
+        }
+
+        Rectangle {
             width: parent.width; height: 188; radius: theme.radiusCard; color: theme.surface; border.color: theme.line
             Column {
                 anchors.fill: parent; anchors.margins: 18; spacing: 10
                 Text { text: "Tanılama Paketi · USB dışa aktarımı"; color: theme.ink; font.pixelSize: 18; font.bold: true }
-                Text { width: parent.width; text: "Paket önce yalnızca geçici /run alanında oluşturulur. Live boot aygıtı tanımlanamıyorsa dışa aktarım kapalı kalır; yalnızca ayrı ve doğrulanmış USB kabul edilir."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap }
+                Text { width: parent.width; text: "Paket ses çıkış rotası, ağ durumu ve sabit HTTPS kontrollerini içerir; parola, Wi-Fi anahtarı, tarayıcı geçmişi veya sayfa içeriği içermez. Önce geçici /run alanında hazırlanır; yalnızca ayrı ve doğrulanmış USB belleğe doğrulanmış kopya aktarılır."; color: theme.muted; font.pixelSize: 14; wrapMode: Text.WordWrap }
                 Row {
                     width: parent.width
                     spacing: 10

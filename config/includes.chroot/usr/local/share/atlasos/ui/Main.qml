@@ -17,12 +17,16 @@ Window {
     color: theme.canvas
     property string page: "home"
     property string viewMode: "dashboard"
+    property bool pdfFullscreen: false
     property var atlasPreferences: null
     property bool boardMode: atlasPreferences !== null && (atlasPreferences.displayMode === "board" || (atlasPreferences.displayMode === "auto" && atlasPreferences.touchscreenDetected))
-    // A smartboard is normally viewed from several metres away. Scale its
-    // controls and typography as a coordinated density, including at the
-    // common 1366 logical-pixel framebuffer used by some 1080p panels.
-    property real interfaceScale: root.boardMode ? Math.min(2.64, Math.max(root.width < 1440 ? 1.16 : 1.32, Math.min(root.width / 1920, root.height / 1080) * 1.32)) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
+    // QML geometry already uses device-independent logical pixels. Board
+    // density is an additional, modest touch/readability adjustment; cap it
+    // so large logical 4K desktops do not make fixed-size component internals
+    // grow out of proportion. A 4K DPR 2 display arrives here as 1920x1080.
+    property real interfaceScale: root.boardMode ? Math.min(2.0, Math.max(root.width < 1440 ? 1.16 : 1.32, Math.min(root.width / 1920, root.height / 1080) * 1.32)) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
+    onInterfaceScaleChanged: if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(boardMode ? interfaceScale : 1.0)
+    onBoardModeChanged: if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(boardMode ? interfaceScale : 1.0)
     property string workspaceTitle: ""
     property bool notificationsOpen: false
     property var lessons: []
@@ -110,7 +114,7 @@ Window {
             textViewer.requestNavigationDiscard()
             return
         }
-        if (viewMode === "pdf") pdf.close()
+        if (viewMode === "pdf") { pdf.close(); pdfFullscreen = false }
         if (viewMode === "video") videoPlayer.close()
         viewMode = "dashboard"
     }
@@ -145,7 +149,7 @@ Window {
     function workspaceBack() {
         if (viewMode === "web" && browser.canGoBack) browser.back()
         else if (viewMode === "files" && filesView.back()) return
-        else if (viewMode === "pdf") { pdf.close(); viewMode = "files"; return }
+        else if (viewMode === "pdf") { pdf.close(); pdfFullscreen = false; viewMode = "files"; return }
         else if (viewMode === "video") { videoPlayer.close(); viewMode = "files"; return }
         else leaveWorkspace()
     }
@@ -359,6 +363,7 @@ Window {
     }
     AtlasHeader {
         id: header
+        visible: !root.pdfFullscreen
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
         networkState: root.systemStatus.network
         audioState: root.systemStatus.audio
@@ -436,14 +441,14 @@ Window {
     Rectangle {
         id: workspace
         visible: root.viewMode !== "dashboard"
-        anchors.top: header.bottom; anchors.bottom: parent.bottom; 
+        anchors.top: root.pdfFullscreen && root.viewMode === "pdf" ? parent.top : header.bottom; anchors.bottom: parent.bottom;
         anchors.left: sidebar.visible ? sidebar.right : parent.left; anchors.right: parent.right
         color: theme.canvas
 
         Rectangle {
             id: toolbar
             anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-            visible: ["settings", "network", "files"].indexOf(root.viewMode) < 0
+            visible: ["settings", "network", "files"].indexOf(root.viewMode) < 0 && !(root.viewMode === "pdf" && root.pdfFullscreen)
             height: visible ? 70 * root.interfaceScale : 0; color: "#f7faff"; border.color: theme.line
             Row {
                 anchors.left: parent.left; anchors.leftMargin: 18 * root.interfaceScale
@@ -459,7 +464,7 @@ Window {
                     MouseArea { anchors.fill: parent; onClicked: root.leaveWorkspace() }
                 }
                 Text {
-                    width: Math.max(150, Math.min(400, root.width - 540))
+                    width: Math.max(150 * root.interfaceScale, Math.min(400 * root.interfaceScale, root.width - 540 * root.interfaceScale))
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.workspaceTitle; color: theme.ink; font.pixelSize: 20 * root.interfaceScale; font.bold: true
                     elide: Text.ElideRight
@@ -512,8 +517,12 @@ Window {
         AtlasPdf {
             id: pdf
             visible: root.viewMode === "pdf"
+            boardMode: root.boardMode
+            uiScale: root.interfaceScale
             anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
             anchors.left: parent.left; anchors.right: parent.right
+            onOpenRequested: root.openTool("pdf", true)
+            onImmersiveRequested: function(enabled) { root.pdfFullscreen = enabled }
         }
         AtlasVideo {
             id: videoPlayer
@@ -606,7 +615,7 @@ Window {
     AtlasLauncher {
         id: launcher
         onSelected: function(key) { root.openTool(key) }
-        anchors.top: header.bottom; anchors.bottom: parent.bottom; 
+        anchors.top: header.bottom; anchors.bottom: parent.bottom;
         anchors.left: parent.left; anchors.right: parent.right
     }
     AtlasNotifications {

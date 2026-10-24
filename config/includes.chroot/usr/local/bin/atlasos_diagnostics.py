@@ -7,6 +7,7 @@ whose removable USB ancestry and mount source have been revalidated.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -30,7 +31,9 @@ PRIVACY_RULES = [
     "Browser histories, cookies, passwords, tokens, profiles and page contents are not collected.",
     "Wi-Fi credentials, SSH keys, clipboard, home documents and personal files are not collected.",
     "Storage inventory reads device metadata only; filesystems are never traversed or mounted.",
-    "Logs are bounded and sanitized for home paths, account IDs, MAC addresses and credential-like values.",
+    "Logs are bounded and sanitized for home paths, account IDs, MAC/IP addresses, URL query strings, SSIDs and Wi-Fi profile names in supported log formats, and credential-like values.",
+    "Audio diagnostics record device/route state only; no test tone or microphone capture is performed.",
+    "Network diagnostics use fixed HTTPS probes and record outcome codes only; no page body, browsing history, proxy value or credentials are stored.",
 ]
 MAX_LOG_BYTES = 2 * 1024 * 1024
 MAX_BUNDLE_BYTES = 24 * 1024 * 1024
@@ -56,9 +59,25 @@ def sanitize_text(text: str) -> str:
     text = text[:MAX_LOG_BYTES]
     text = re.sub(r"/home/[^/\s]+", "/home/[USER]", text)
     text = re.sub(r"/run/user/\d+", "/run/user/[UID]", text)
+    text = re.sub(r"(?i)(https?://)[^/@\s]+:[^/@\s]+@", r"\1[REDACTED]@", text)
+    text = re.sub(r"(?i)(https?://[^/\s?#]+)(?:/[^\s?#]*)?(?:\?[^\s#]*)?(?:#[^\s]*)?", r"\1/[PATH/QUERY REDACTED]", text)
     text = re.sub(r"(?i)(password|passwd|psk|token|cookie|secret|username|user|account|_uid|uid)(\s*[=:]\s*)\S+", r"\1\2[REDACTED]", text)
+    # NetworkManager journal lines can carry the SSID as a quoted value after
+    # the quoted key ("added 'ssid' value '...'"), not as ssid=... . Mask the
+    # complete value, including spaces, before applying the general key form.
+    text = re.sub(r"(?i)(\bssid\b['\"]?\s+value\s+)(['\"])(.*?)\2", r"\1\2[REDACTED]\2", text)
+    # Unquoted key/value forms have no reliable delimiter for SSIDs containing
+    # spaces; redact the rest of that log line rather than leak a suffix.
+    text = re.sub(r"(?i)(\bssid\s*(?:[=:]\s*|\s+))(?:(['\"])(.*?)\2|[^\r\n]*)", r"\1[REDACTED]", text)
+    # NM also logs the network/profile name outside an explicit SSID field.
+    text = re.sub(r"(?i)(\baccess point\s+)(['\"])(.*?)\2", r"\1\2[REDACTED]\2", text)
+    text = re.sub(r"(?i)(\bconnected to wireless network\s+)(['\"])(.*?)\2", r"\1\2[REDACTED]\2", text)
+    text = re.sub(r"(?im)(^.*NetworkManager[^\r\n]*\bop=\"connection-[^\"]+\"[^\r\n]*\bname=)(['\"])(.*?)\2", r"\1\2[REDACTED]\2", text)
+    text = re.sub(r"(?im)(^.*NetworkManager[^\r\n]*Activation:\s+starting connection\s+['\"][^'\"]+['\"]\s+\()([^)]*)(\))", r"\1[REDACTED]\3", text)
+    text = re.sub(r"(?i)\b(connection|profile)\s+(['\"])[^'\"]+\2", r"\1 [REDACTED]", text)
     text = re.sub(r"\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b", "[MAC]", text)
     text = re.sub(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", "[IP]", text)
+    text = re.sub(r"(?i)\b(?:[0-9a-f]{0,4}:){2,}[0-9a-f]{0,4}\b", "[IPV6]", text)
     text = re.sub(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}\b", "[UUID]", text)
     return text
 
@@ -277,85 +296,143 @@ class StorageSafetyPolicy:
         return mount
 
     def export(self, archive: Path, destination: str, expected_mount_id=None):
-        if (not archive.is_file() or archive.is_symlink() or archive.stat().st_size <= 0
-                or archive.stat().st_size > MAX_BUNDLE_BYTES):
-            raise ValueError("Tanılama paketi geçersiz veya boyut sınırını aşıyor.")
-        self._validate_bundle(archive)
-        mount = self.authorize_destination(destination, expected_mount_id)
-        target_dir = Path(destination)
-        usage = shutil.disk_usage(target_dir)
-        required = archive.stat().st_size + 1024 * 1024
-        if usage.free < required:
-            raise OSError("USB bellekte tanılama paketi için yeterli boş alan yok.")
-        name = archive.name
-        if not re.fullmatch(rf"AtlasOS-Diagnostics-{re.escape(VERSION)}-[0-9TZ-]+\.zip", name):
-            raise ValueError("Yalnızca oluşturulmuş AtlasOS tanılama arşivleri dışa aktarılabilir.")
-        dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-        dir_fd = os.open(target_dir, dir_flags)
-        partial_name = f".{name}.{os.urandom(8).hex()}.partial"
-        file_fd = None
+        # Pin and validate the source archive once; the bytes copied below come
+        # from this same open regular-file descriptor.
+        archive_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        archive_fd = os.open(archive, archive_flags)
         try:
-            # Pin writes to the already-open verified mount root. This prevents a
-            # later path/symlink swap from redirecting data onto another mount.
-            self.authorize_destination(destination, mount["id"])
-            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-            file_fd = os.open(partial_name, flags, 0o600, dir_fd=dir_fd)
-            digest = hashlib.sha256()
-            copied = 0
-            with os.fdopen(file_fd, "wb", closefd=True) as dest, archive.open("rb") as src:
-                file_fd = None
-                while True:
-                    self.authorize_destination(destination, mount["id"])
-                    chunk = src.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    digest.update(chunk)
-                    view = memoryview(chunk)
-                    while view:
-                        written = dest.write(view)
-                        if not written:
-                            raise OSError("Tanılama paketi USB belleğe tam yazılamadı.")
-                        copied += written
-                        view = view[written:]
-                dest.flush()
-                os.fsync(dest.fileno())
-            if copied != archive.stat().st_size:
-                raise OSError("Tanılama paketi USB belleğe eksik aktarıldı.")
-            verify_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-            verify_fd = os.open(partial_name, verify_flags, dir_fd=dir_fd)
-            with os.fdopen(verify_fd, "rb") as copied_file:
+            archive_stat = os.fstat(archive_fd)
+            if not stat.S_ISREG(archive_stat.st_mode) or archive_stat.st_size <= 0 or archive_stat.st_size > MAX_BUNDLE_BYTES:
+                raise ValueError("Tanılama paketi geçersiz veya boyut sınırını aşıyor.")
+            try:
+                with os.fdopen(os.dup(archive_fd), "rb", closefd=True) as source_validation:
+                    self._validate_bundle_stream(source_validation)
+            except (zipfile.BadZipFile, EOFError) as exc:
+                raise ValueError("Tanılama paketi geçerli bir ZIP arşivi değil.") from exc
+            os.lseek(archive_fd, 0, os.SEEK_SET)
+
+            mount = self.authorize_destination(destination, expected_mount_id)
+            target_dir = Path(destination)
+            usage = shutil.disk_usage(target_dir)
+            if usage.free < archive_stat.st_size + 1024 * 1024:
+                raise OSError("USB bellekte tanılama paketi için yeterli boş alan yok.")
+            name = Path(archive).name
+            if not re.fullmatch(rf"AtlasOS-Diagnostics-{re.escape(VERSION)}-[0-9TZ-]+\.zip", name):
+                raise ValueError("Yalnızca oluşturulmuş AtlasOS tanılama arşivleri dışa aktarılabilir.")
+
+            dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            dir_fd = os.open(target_dir, dir_flags)
+            file_fd = None
+            created = False
+            complete = False
+            try:
+                self.authorize_destination(destination, mount["id"])
+                # O_EXCL atomically reserves the final name on ordinary Linux
+                # filesystems including FAT/exFAT implementations that lack
+                # O_TMPFILE or linkat(AT_EMPTY_PATH). No rename/replace fallback
+                # is used. The file stays open by descriptor for all writes and
+                # validation; only this owned inode is ever truncated on error.
+                flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+                file_fd = os.open(name, flags, 0o600, dir_fd=dir_fd)
+                created = True
+
+                source_digest = hashlib.sha256()
+                copied = 0
+                with os.fdopen(os.dup(archive_fd), "rb", closefd=True) as source:
+                    while True:
+                        self.authorize_destination(destination, mount["id"])
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        source_digest.update(chunk)
+                        view = memoryview(chunk)
+                        while view:
+                            written = os.write(file_fd, view)
+                            if written <= 0:
+                                raise OSError("Tanılama paketi USB belleğe tam yazılamadı.")
+                            copied += written
+                            view = view[written:]
+                if copied != archive_stat.st_size:
+                    raise OSError("Tanılama paketi USB belleğe eksik aktarıldı.")
+                os.fsync(file_fd)
+
+                os.lseek(file_fd, 0, os.SEEK_SET)
                 copied_digest = hashlib.sha256()
-                while True:
-                    chunk = copied_file.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    copied_digest.update(chunk)
-                if copied_digest.digest() != digest.digest():
-                    raise OSError("USB bellekteki tanılama paketi kaynakla eşleşmiyor.")
-                copied_file.seek(0)
-                self._validate_bundle_stream(copied_file)
-            self.authorize_destination(destination, mount["id"])
-            try:
-                os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
-            except FileNotFoundError:
-                pass
-            else:
-                raise FileExistsError("Aynı adlı tanılama paketi USB bellekte zaten var; üzerine yazılmadı.")
-            # Publish only after a full-size, hash-matched, readable ZIP exists.
-            # The temporary file is in the same USB directory, so rename is atomic.
-            os.rename(partial_name, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
-            self.authorize_destination(destination, mount["id"])
-            return str(target_dir / name)
-        except Exception:
-            try:
+                with os.fdopen(os.dup(file_fd), "rb", closefd=True) as copied_file:
+                    while True:
+                        chunk = copied_file.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        copied_digest.update(chunk)
+                    if copied_digest.digest() != source_digest.digest():
+                        raise OSError("USB kopyası kaynak tanılama paketiyle eşleşmiyor.")
+                    copied_file.seek(0)
+                    try:
+                        self._validate_bundle_stream(copied_file)
+                    except (zipfile.BadZipFile, EOFError) as exc:
+                        raise ValueError("USB kopyası geçerli bir ZIP arşivi değil.") from exc
+
+                opened_stat = os.fstat(file_fd)
+                named_stat = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+                if (not stat.S_ISREG(named_stat.st_mode) or opened_stat.st_nlink < 1
+                        or (opened_stat.st_dev, opened_stat.st_ino) != (named_stat.st_dev, named_stat.st_ino)):
+                    raise OSError("USB hedef girdisi aktarım sırasında değişti; dışa aktarma başarılı sayılmadı.")
+                complete = True
+                try:
+                    self.authorize_destination(destination, mount["id"])
+                except Exception as exc:
+                    raise OSError("Tanılama paketi doğrulandı ve USB dosyasına yazıldı ancak son mount doğrulaması başarısız oldu; final dosya silinmedi. USB içeriğini kontrol edin.") from exc
+                try:
+                    os.fsync(dir_fd)
+                except OSError as exc:
+                    # Some removable filesystems reject directory fsync even
+                    # after the file itself has been synced and validated.
+                    if exc.errno not in (errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP):
+                        raise
+                return str(target_dir / name)
+            except Exception as primary_error:
+                cleanup_errors = []
+                if created and file_fd is not None and not complete:
+                    try:
+                        os.ftruncate(file_fd, 0)
+                    except OSError as exc:
+                        cleanup_errors.append(f"truncate: {exc}")
+                    try:
+                        os.fsync(file_fd)
+                    except OSError as exc:
+                        cleanup_errors.append(f"flush: {exc}")
+                    try:
+                        os.close(file_fd)
+                    except OSError as exc:
+                        cleanup_errors.append(f"close: {exc}")
+                    file_fd = None
+                    if cleanup_errors:
+                        detail = "; ".join(cleanup_errors)
+                        raise OSError(
+                            f"{primary_error} Export failed; an empty or incomplete file named {name} may remain on the USB because cleanup failed ({detail}). No pathname-based deletion was attempted."
+                        ) from primary_error
+                    raise OSError(
+                        f"{primary_error} Export failed; an empty file named {name} remains on the USB. It was not reported as a successful archive and was not removed by pathname."
+                    ) from primary_error
+                raise
+            finally:
                 if file_fd is not None:
-                    os.close(file_fd)
-                os.unlink(partial_name, dir_fd=dir_fd)
-            except OSError:
-                pass
-            raise
+                    try:
+                        os.close(file_fd)
+                    except OSError as exc:
+                        if complete:
+                            raise OSError(
+                                exc.errno, "Tanılama paketi doğrulandı ve yazıldı ancak dosya tanıtıcısı kapatılamadı; dosya silinmedi. USB içeriğini kontrol edin.", str(target_dir / name)
+                            ) from exc
+                try:
+                    os.close(dir_fd)
+                except OSError as exc:
+                    if complete:
+                        raise OSError(
+                            exc.errno, "Tanılama paketi doğrulandı ve yazıldı ancak hedef dizin tanıtıcısı kapatılamadı; dosya silinmedi.", str(target_dir / name)
+                        ) from exc
         finally:
-            os.close(dir_fd)
+            os.close(archive_fd)
 
     @staticmethod
     def _validate_bundle_stream(stream):
@@ -390,6 +467,21 @@ class DiagnosticsCollector:
         "xrandr": ("xrandr", "--query"),
         "systemd_analyze": ("systemd-analyze", "blame"),
         "critical_chain": ("systemd-analyze", "critical-chain", "graphical.target"),
+        "network_devices": ("nmcli", "-t", "--escape", "no", "-f", "DEVICE,TYPE,STATE", "device", "status"),
+        "network_route": ("ip", "route", "show", "default"),
+        "network_connectivity": ("nmcli", "networking", "connectivity", "check"),
+        "desktop_proxy_mode": ("gsettings", "get", "org.gnome.system.proxy", "mode"),
+        "pipewire_version": ("pw-play", "--version"),
+        "wpctl_volume": ("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"),
+        "wpctl_inspect": ("wpctl", "inspect", "@DEFAULT_AUDIO_SINK@"),
+        "pactl_sinks": ("pactl", "list", "short", "sinks"),
+        "pactl_cards": ("pactl", "list", "cards"),
+        "pactl_full_sinks": ("pactl", "list", "sinks"),
+        "time_sync_status": ("timedatectl", "show", "--property=Timezone", "--property=NTPSynchronized", "--property=NTP", "--property=LocalRTC", "--property=TimeUSec"),
+        "chrony_tracking": ("chronyc", "tracking"),
+        "chrony_sources": ("chronyc", "sources", "-v"),
+        "alsa_playback_devices": ("aplay", "-l"),
+        "audio_journal": ("journalctl", "--user", "--no-pager", "--output=short-monotonic", "--since=-15min", "-u", "pipewire", "-u", "pipewire-pulse", "-u", "wireplumber"),
     }
     PRIVILEGED_BOOT_COMMAND = (
         "/usr/bin/sudo", "-n", "--", "/usr/local/libexec/atlasos-privileged-diagnostics",
@@ -640,6 +732,194 @@ class DiagnosticsCollector:
         return {"events": timeline, "timestamps_are_exact": True,
                 "note": "Only timestamps present in current-boot source lines are retained; wall-clock values are never converted to monotonic time."}
 
+    @staticmethod
+    def _curl_category(returncode):
+        return {
+            5: "proxy", 6: "dns", 7: "connection", 28: "timeout",
+            35: "tls_handshake", 51: "certificate", 56: "connection_reset_or_interrupted",
+            58: "tls_client_certificate", 60: "certificate", 77: "ca_store",
+            97: "proxy",
+        }.get(returncode, "ok" if returncode == 0 else "other")
+
+    def _https_probe(self, label, host):
+        # Fixed destinations only; strict curl certificate validation remains on.
+        # Verbose output is parsed in memory and never written raw to the bundle.
+        url = f"https://{host}/"
+        argv = ("curl", "--verbose", "--silent", "--show-error", "--head",
+                "--location", "--max-redirs", "3", "--connect-timeout", "2",
+                "--max-time", "6", "--output", "/dev/null", "--write-out",
+                "%{http_code}|%{ssl_verify_result}", "--", url)
+        record = {"label": label, "host": host, "tool": "curl", "tls_verification": "enabled"}
+        try:
+            result = self.command_runner(argv)
+            fields = (result.stdout or "").strip().split("|", 1)
+            record["http_status"] = fields[0] if fields and fields[0].isdigit() else None
+            try:
+                record["tls_verify_result"] = int(fields[1]) if len(fields) > 1 else None
+            except ValueError:
+                record["tls_verify_result"] = None
+            record["curl_exit"] = int(result.returncode)
+            record["category"] = self._curl_category(record["curl_exit"])
+            if record["curl_exit"] == 0 and record["tls_verify_result"] == 0:
+                record["category"] = "verified"
+            issuer = re.search(r"(?im)^\s*\*\s+issuer:\s*(.+)$", result.stderr or "")
+            record["presented_issuer"] = sanitize_text(issuer.group(1).strip())[:180] if issuer else None
+        except (OSError, subprocess.TimeoutExpired, PermissionError) as exc:
+            record.update({"curl_exit": None, "tls_verify_result": None,
+                           "category": "unavailable" if isinstance(exc, FileNotFoundError) else type(exc).__name__,
+                           "presented_issuer": None})
+            self.errors.append({"collector": "https_probe:" + label, "error": type(exc).__name__})
+        return record
+
+    def _network_diagnostics(self, progress=None):
+        devices = self._collect_command("network_devices")
+        route = self._collect_command("network_route")
+        connectivity = self._collect_command("network_connectivity")
+        desktop_proxy_mode = self._collect_command("desktop_proxy_mode")
+        proxies_present = any(os.environ.get(name) for name in
+                              ("http_proxy", "https_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"))
+        probe_targets = (
+            ("atlasos_site", "chavooosss.github.io"),
+            ("independent_control", "example.com"),
+            ("eba", "www.eba.gov.tr"),
+            ("ogm_material", "ogmmateryal.eba.gov.tr"),
+            ("mebi", "mebi.eba.gov.tr"),
+        )
+        probes = []
+        for index, (label, host) in enumerate(probe_targets):
+            if progress:
+                progress(f"HTTPS bağlantısı kontrol ediliyor: {label}", 94 + index)
+            probes.append(self._https_probe(label, host))
+        return {
+            "networkmanager_device_status": devices[:12000],
+            "default_route_summary": route[:4000],
+            "networkmanager_connectivity_check": connectivity[:1000],
+            "desktop_proxy_mode": desktop_proxy_mode[:500],
+            "proxy_environment_configured": proxies_present,
+            "probes": probes,
+            "limitations": [
+                "curl probes are not Chrome navigation and can use a different certificate store.",
+                "Only fixed public hosts are tested; school-specific TLS interception needs a test against the affected school URL.",
+                "No proxy values, URL paths, query strings, response bodies, DNS answers or browser history are collected.",
+            ],
+        }
+
+    @staticmethod
+    def _filter_audio_inspection(text):
+        allowed = re.compile(
+            r"^\s*(?:id|node\.(?:name|description|state)|media\.class|device\.(?:api|name|description|profile\.name)|"
+            r"api\.alsa\.(?:card|card\.name|path)|audio\.(?:channels|rate))\s*=\s*.*$"
+        )
+        return "\n".join(sanitize_text(line) for line in text.splitlines() if allowed.match(line))[:12000]
+
+    @staticmethod
+    def _filter_audio_cards(text):
+        kept = []
+        section = None
+        for line in text.splitlines():
+            stripped = line.strip()
+            if re.match(r"^(?:Card|Sink) #\d+$", stripped):
+                kept.append(stripped)
+                section = None
+            elif re.match(r"^(Name|Description|Active Profile|Active Port):\s*", stripped):
+                kept.append(sanitize_text(stripped))
+                section = None
+            elif stripped in ("Profiles:", "Ports:"):
+                section = stripped[:-1].lower()
+                kept.append(stripped)
+            elif section in ("profiles", "ports") and "available:" in stripped.lower():
+                if re.match(r"^[^:]+:.+available:\s*(yes|no|unknown)", stripped, re.I):
+                    kept.append(sanitize_text(stripped))
+            elif not stripped:
+                section = None
+        return "\n".join(kept)[:12000]
+
+    def _audio_diagnostics(self):
+        services = {}
+        for unit in ("pipewire.service", "pipewire-pulse.service", "wireplumber.service"):
+            try:
+                result = self.command_runner(("systemctl", "--user", "is-active", unit))
+                services[unit] = result.stdout.strip() if result.returncode == 0 else "inactive_or_unavailable"
+            except (OSError, subprocess.TimeoutExpired, PermissionError) as exc:
+                services[unit] = "unavailable:" + type(exc).__name__
+        volume = self._collect_command("wpctl_volume")
+        inspection_raw = self._collect_command("wpctl_inspect")
+        inspection = self._filter_audio_inspection(inspection_raw)
+        sinks = self._collect_command("pactl_sinks")
+        cards_raw = self._collect_command("pactl_cards")
+        cards = self._filter_audio_cards(cards_raw)
+        sinks_raw = self._collect_command("pactl_full_sinks")
+        sink_ports = self._filter_audio_cards(sinks_raw)
+        alsa = self._collect_command("alsa_playback_devices")
+        alsa_cards = []
+        cards_text = _read(self.proc_root / "asound/cards")
+        card_ids = []
+        for line in cards_text.splitlines():
+            match = re.match(r"^\s*(\d+)\s+\[", line)
+            if match and len(card_ids) < 8:
+                card_ids.append(match.group(1))
+        for card_id in card_ids:
+            try:
+                result = self.command_runner(("amixer", "-c", card_id, "scontents"))
+                alsa_cards.append({"card_index": int(card_id), "returncode": result.returncode,
+                                   "controls": sanitize_text((result.stdout or "") + (result.stderr or ""))[:6000]})
+            except (OSError, subprocess.TimeoutExpired, PermissionError) as exc:
+                alsa_cards.append({"card_index": int(card_id), "error": type(exc).__name__})
+        journal = self._collect_command("audio_journal")
+        version = self._collect_command("pipewire_version")
+        return {
+            "services": services,
+            "default_sink_volume_and_mute": volume[:2000],
+            "default_sink_properties": inspection,
+            "available_pipewire_sinks": sinks[:8000],
+            "audio_card_profiles_and_ports": cards,
+            "sink_ports_and_active_port": sink_ports,
+            "alsa_playback_devices": alsa[:8000],
+            "alsa_mixer_controls_read_only": alsa_cards,
+            "recent_user_audio_service_log": journal[:12000],
+            "player_version": version[:1000],
+            "test_tone_played": False,
+            "microphone_recording_performed": False,
+            "limitations": [
+                "This is a read-only route/device snapshot and does not prove that physical speakers emit sound.",
+                "No sink/profile/route is changed and no test tone is played automatically.",
+            ],
+        }
+
+    def _browser_diagnostics(self):
+        candidates = ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser")
+        selected = next((shutil.which(item) for item in candidates if shutil.which(item)), None)
+        browser = {"available": bool(selected), "executable": Path(selected).name if selected else None, "version": None}
+        if selected:
+            try:
+                result = self.command_runner((selected, "--version"))
+                if result.returncode == 0:
+                    browser["version"] = sanitize_text((result.stdout or "").strip())[:200]
+            except (OSError, subprocess.TimeoutExpired, PermissionError):
+                pass
+        ca_bundle = Path("/etc/ssl/certs/ca-certificates.crt")
+        try:
+            info = ca_bundle.stat()
+            ca = {"available": True, "size_bytes": info.st_size,
+                  "modified_utc": datetime.fromtimestamp(info.st_mtime, timezone.utc).isoformat()}
+        except OSError:
+            ca = {"available": False, "size_bytes": None, "modified_utc": None}
+        log_path = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "atlasos" / "browser.log"
+        launcher_log = None
+        try:
+            if log_path.is_file() and not log_path.is_symlink():
+                lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-100:]
+                launcher_log = sanitize_text("\n".join(lines))[-16000:]
+        except OSError:
+            launcher_log = None
+        return {"browser": browser, "system_ca_bundle": ca,
+                "atlasos_browser_launcher_log": launcher_log,
+                "browser_history_collected": False,
+                "limitations": [
+                    "Chrome internal navigation diagnostics and its profile trust store are not collected.",
+                    "Launcher logs and curl probes cannot alone identify the school network root cause.",
+                ]}
+
     def _collect_privileged_boot(self):
         try:
             result = self.command_runner(self.PRIVILEGED_BOOT_COMMAND)
@@ -719,6 +999,7 @@ class DiagnosticsCollector:
         return Path(tempfile.mkdtemp(prefix="atlasos-diagnostics-", dir=runtime_dir))
 
     def collect_all(self, progress=None, observations=None):
+        self.errors = []
         stages = [
             ("Sistem bilgileri alınıyor", 10), ("Performans ölçülüyor", 25),
             ("Grafik altyapısı inceleniyor", 40), ("Boot günlükleri toplanıyor", 60),
@@ -769,6 +1050,13 @@ class DiagnosticsCollector:
         self._write_json(root, "system/display.json", summary.get("display"))
         self._write_json(root, "system/storage-inventory.json", summary["storage"])
         self._write_json(root, "system/network-summary.json", summary["network"])
+        self._write_json(root, "system/time-sync.json", {
+            "timedatectl": self._collect_command("time_sync_status")[:4000],
+            "chrony_tracking": self._collect_command("chrony_tracking")[:6000],
+            "chrony_sources": self._collect_command("chrony_sources")[:8000],
+            "limitations": ["Time synchronization state is a snapshot; it does not prove the clock is correct.",
+                            "Network source addresses are sanitized; no time service configuration is changed."],
+        })
         self._write_json(root, "performance/idle.json", {"load_average": load, "cpu": cpu, "memory": memory, "processes": processes})
         self._write_json(root, "performance/cpu.json", {"mode": "snapshot", "cpu": cpu})
         self._write_json(root, "performance/memory.json", memory)
@@ -785,7 +1073,7 @@ class DiagnosticsCollector:
                     "second_black_transition": None, "desktop_visible": None}
         if isinstance(observations, dict):
             for key in physical:
-                if isinstance(observations.get(key), (type(None), bool, str, int, float)):
+                if key in observations and isinstance(observations[key], (type(None), bool, str, int, float)):
                     physical[key] = observations[key]
         self._write_json(root, "boot/physical-video-observations.json", physical)
         for key, filename in (("lspci", "lspci.txt"), ("modules", "modules.txt"), ("xrandr", "xrandr.txt")):
@@ -794,7 +1082,7 @@ class DiagnosticsCollector:
         self._write_json(root, "atlas/version.json", {"version": VERSION})
         self._write_json(root, "atlas/services.json", services)
         self._write_json(root, "atlas/session.json", {"session_type": os.environ.get("XDG_SESSION_TYPE"), "desktop": os.environ.get("XDG_CURRENT_DESKTOP")})
-        summary.update({"schema_version": 1, "collection_timestamp": datetime.now(timezone.utc).isoformat(),
+        summary.update({"schema_version": 2, "collection_timestamp": datetime.now(timezone.utc).isoformat(),
                         "live_session": True, "boot_timeline": timeline, "performance_summary": {"cpu": cpu, "memory": memory, "load_average": load},
                         "warnings": ["Internal storage is protected; no storage benchmark is available."],
                         "collection_errors": self.errors, "storage_safety_state": "INTERNAL_READ_ONLY_UNKNOWN_PROTECTED"})
@@ -802,13 +1090,59 @@ class DiagnosticsCollector:
         self._write_json(root, "collection/errors.json", self.errors)
         relative_files = sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
         relative_files.extend(["collection/manifest.json", "README.txt"])
-        manifest = {"schema_version": 1, "sanitization": "home paths, UID paths, MAC/IP addresses, UUIDs, credential-like key/value strings",
+        manifest = {"schema_version": 2, "sanitization": "home paths, UID paths, MAC/IP addresses, UUIDs, URL paths and query strings, SSIDs and Wi-Fi profile names in supported log formats, credential-like key/value strings",
                     "privacy_rules": PRIVACY_RULES, "files": relative_files,
                     "storage_writes": "volatile /run bundle only until explicit removable export",
                     "filesystem_scanning": False, "auto_mount": False}
         self._write_json(root, "collection/manifest.json", manifest)
-        self._write_text(root, "README.txt", "AtlasOS 0.6.4 Tanılama Paketi\nBu paket salt okunur sistem gözlemlerini içerir. Dahili depolama korunur.\nGünlükler sınırlı ve sanitize edilmiştir; manifest.json ayrıntıları listeler.\n")
+        self._write_text(root, "README.txt", "AtlasOS 0.6.4 Tanılama Paketi\nBu paket salt okunur sistem gözlemlerini içerir. Dahili depolama korunur.\nSes/ağ/TLS verileri sınırlı ve salt okunurdur; fiziksel sonuç seçimi kullanıcı bildirimidir.\nGünlükler sınırlı ve sanitize edilmiştir; manifest.json ayrıntıları listeler.\n")
         report(*stages[5])
+        report("Ses çıkış rotası inceleniyor", 93)
+        audio_data = self._audio_diagnostics()
+        self._write_json(root, "audio/output-route.json", audio_data)
+        self._write_text(root, "audio/recent-audio-service-log.txt", audio_data["recent_user_audio_service_log"])
+        network_data = self._network_diagnostics(progress=report)
+        self._write_json(root, "network/https-connectivity.json", network_data)
+        journal_lines = boot_data["journal_current"].splitlines()
+        nm_events = "\n".join(line for line in journal_lines if re.search(r"NetworkManager|networkmanager|wpa_supplicant|dhclient|dhcpcd", line, re.I))
+        self._write_text(root, "network/recent-network-events.txt", sanitize_text(nm_events[-12000:]))
+        self._write_json(root, "browser/browser-and-ca-status.json", self._browser_diagnostics())
+        allowed_observations = {
+            "speaker_test": {"not_tested", "audible", "silent"},
+            "chrome_navigation": {"not_tested", "loaded", "connection_reset",
+                                  "certificate_authority_invalid", "other_error"},
+        }
+        recorded = {}
+        for key, allowed in allowed_observations.items():
+            item = observations.get(key) if isinstance(observations, dict) else None
+            value = item.get("value") if isinstance(item, dict) else None
+            if value not in allowed:
+                value = "not_tested"
+            recorded[key] = {
+                "value": value,
+                "recorded_at_utc": item.get("recorded_at_utc") if isinstance(item, dict) and value != "not_tested" else None,
+                "source": "user_reported_manual_observation",
+            }
+        self._write_json(root, "field/physical-observations.json", {
+            "observations": recorded,
+            "interpretation": "Selections are user-reported observations, not independently measured hardware results.",
+            "urls_or_page_contents_collected": False,
+        })
+        relative_files = sorted(
+            str(path.relative_to(root)) for path in root.rglob("*")
+            if path.is_file() and path.relative_to(root).as_posix() != "collection/manifest.json"
+        )
+        manifest = {
+            "schema_version": 2,
+            "sanitization": "home paths, UID paths, MAC/IP addresses, UUIDs, URL paths and query strings, SSIDs and Wi-Fi profile names in supported log formats, credential-like key/value strings",
+            "privacy_rules": PRIVACY_RULES,
+            "files": relative_files + ["collection/manifest.json"],
+            "storage_writes": "volatile /run bundle only until explicit removable export",
+            "filesystem_scanning": False,
+            "auto_mount": False,
+        }
+        self._write_json(root, "collection/manifest.json", manifest)
+        report("Tanılama arşivi oluşturuluyor", 99)
         archive = root.parent / f"AtlasOS-Diagnostics-{VERSION}-{timestamp}.zip"
         partial_archive = None
         try:

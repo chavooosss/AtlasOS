@@ -4,13 +4,17 @@ import sys
 import json
 import base64
 import binascii
+import io
+import math
 import shutil
 import stat
+import struct
 import tempfile
 import re
 import subprocess
 import threading
-from datetime import datetime
+import wave
+from datetime import datetime, timezone
 from pathlib import Path
 
 from PySide6.QtCore import QCoreApplication, QObject, QProcess, QProcessEnvironment, QRect, QSettings, Qt, QTimer, QUrl, Property, Signal, Slot
@@ -572,6 +576,30 @@ class AtlasDiagnostics(QObject):
         self._stage = "Hazır"
         self._result = {}
         self._cancel = threading.Event()
+        self._field_observations = {
+            "speaker_test": {"value": "not_tested", "recorded_at_utc": None},
+            "chrome_navigation": {"value": "not_tested", "recorded_at_utc": None},
+        }
+
+    @Property("QVariantMap", notify=changed)
+    def fieldObservations(self):
+        return {key: dict(value) for key, value in self._field_observations.items()}
+
+    @Slot(str, int, result=bool)
+    def setFieldObservation(self, key, selection):
+        choices = {
+            "speaker_test": ("not_tested", "audible", "silent"),
+            "chrome_navigation": ("not_tested", "loaded", "connection_reset",
+                                  "certificate_authority_invalid", "other_error"),
+        }
+        if key not in choices or not isinstance(selection, int) or not 0 <= selection < len(choices[key]):
+            return False
+        self._field_observations[key] = {
+            "value": choices[key][selection],
+            "recorded_at_utc": datetime.now(timezone.utc).isoformat() if selection else None,
+        }
+        self.changed.emit()
+        return True
 
     @Property(bool, notify=changed)
     def busy(self): return self._busy
@@ -616,7 +644,8 @@ class AtlasDiagnostics(QObject):
                     if self._cancel.is_set():
                         raise InterruptedError("Kullanıcı tanılamayı durdurdu.")
                     self.progressChanged.emit(label, value)
-                result = self._collector.collect_all(progress=on_progress)
+                observations = {key: dict(value) for key, value in self._field_observations.items()}
+                result = self._collector.collect_all(progress=on_progress, observations=observations)
                 self.completed.emit(result)
             except Exception as exc:
                 self.completed.emit({"ok": False, "error": str(exc)})
@@ -818,10 +847,96 @@ class AtlasAudio(QObject):
         self._volume = 0
         self._muted = False
         self._outputs = []
+        self._profiles = []
+        self._ports = []
         self._selected_output = -1
         self._output_status = "Ses çıkışları okunuyor"
+        self._test_process = None
+        self._test_timeout = None
         self.refreshOutputs()
         self.refresh()
+
+    @staticmethod
+    def _test_tone_wav():
+        sample_rate = 48000
+        frame_count = int(sample_rate * 0.75)
+        pcm = bytearray()
+        for index in range(frame_count):
+            envelope = min(1.0, index / 2400, (frame_count - index) / 2400)
+            sample = int(32767 * 0.18 * envelope * math.sin(2 * math.pi * 440 * index / sample_rate))
+            pcm.extend(struct.pack("<h", sample))
+        data = io.BytesIO()
+        with wave.open(data, "wb") as output:
+            output.setnchannels(1)
+            output.setsampwidth(2)
+            output.setframerate(sample_rate)
+            output.writeframes(pcm)
+        return data.getvalue()
+
+    @Slot()
+    def testOutput(self):
+        selected = next((item for item in self._outputs
+                         if item["id"] == self._selected_output and item["selected"]), None)
+        if not self._available or not selected or selected["virtual"]:
+            self._output_status = "Önce kullanılabilir bir ses çıkışı seçin."
+            self.changed.emit()
+            return
+        if self._muted or self._volume <= 0:
+            self._output_status = "Test sesi için sesi açın ve ses düzeyini yükseltin."
+            self.changed.emit()
+            return
+        if self._test_process and self._test_process.state() != QProcess.ProcessState.NotRunning:
+            return
+
+        process = QProcess(self)
+        self._test_process = process
+
+        def finish(exit_code, _exit_status):
+            if self._test_process is not process:
+                return
+            timeout.stop()
+            timeout.deleteLater()
+            self._test_timeout = None
+            self._output_status = ("Test sesi gönderildi; hoparlörden duyulup duyulmadığını kontrol edin."
+                                   if exit_code == 0 else
+                                   "Test sesi gönderilemedi; PipeWire çıkışını kontrol edin.")
+            self._test_process = None
+            process.deleteLater()
+            self.changed.emit()
+
+        def fail(_error):
+            if self._test_process is not process:
+                return
+            timeout.stop()
+            timeout.deleteLater()
+            self._test_timeout = None
+            self._output_status = "Test sesi başlatılamadı; pw-play/PipeWire durumunu kontrol edin."
+            self._test_process = None
+            process.deleteLater()
+            self.changed.emit()
+
+        def expire():
+            if self._test_process is not process:
+                return
+            self._test_process = None
+            self._test_timeout = None
+            self._output_status = "Ses testi zaman aşımına uğradı; PipeWire çıkışını kontrol edin."
+            process.kill()
+            process.deleteLater()
+            timeout.deleteLater()
+            self.changed.emit()
+
+        process.started.connect(lambda: (process.write(self._test_tone_wav()), process.closeWriteChannel()))
+        process.finished.connect(finish)
+        process.errorOccurred.connect(fail)
+        timeout = QTimer(self)
+        timeout.setSingleShot(True)
+        timeout.timeout.connect(expire)
+        self._test_timeout = timeout
+        self._output_status = "Kısa test sesi gönderiliyor…"
+        self.changed.emit()
+        process.start("pw-play", ["-"])
+        timeout.start(5000)
 
     @Property(bool, notify=changed)
     def available(self):
@@ -839,9 +954,73 @@ class AtlasAudio(QObject):
     def outputs(self):
         return self._outputs
 
+    @Property("QVariantList", notify=changed)
+    def profiles(self):
+        return self._profiles
+
+    @Property("QVariantList", notify=changed)
+    def ports(self):
+        return self._ports
+
     @Property(str, notify=changed)
     def outputStatus(self):
         return self._output_status
+
+    @staticmethod
+    def _parse_output_profiles(text):
+        profiles = []
+        for block in re.split(r"(?m)^Card #", text)[1:]:
+            first_line = block.splitlines()[0] if block.splitlines() else ""
+            card_id = first_line.strip()
+            if not card_id.isdigit():
+                continue
+            card_name_match = re.search(r"(?m)^\s*Name:\s*(.+)$", block)
+            card_name = card_name_match.group(1).strip() if card_name_match else f"Ses kartı {card_id}"
+            active_match = re.search(r"(?m)^\s*Active Profile:\s*(.+)$", block)
+            active_profile = active_match.group(1).strip() if active_match else ""
+            section = re.search(r"(?ms)^\s*Profiles:\s*\n(.*?)(?=^\s*(?:Active Profile|Ports):|\Z)", block)
+            if not section:
+                continue
+            for line in section.group(1).splitlines():
+                match = re.match(r"^\s+(.+?):\s+(.+?)\s+\([^()]*available:\s*(yes|no|unknown)[^()]*\)\s*$", line)
+                if not match:
+                    continue
+                profile, description, availability = (part.strip() for part in match.groups())
+                if not profile.startswith(("output:", "duplex:")) or availability == "no":
+                    continue
+                label = f"{card_name} · {description}"
+                if availability == "unknown":
+                    label += " · uygunluk bilinmiyor"
+                profiles.append({"cardId": card_id, "profile": profile, "label": label,
+                                 "availability": availability, "selected": profile == active_profile})
+        return profiles
+
+    @staticmethod
+    def _parse_sink_ports(text):
+        ports = []
+        for block in re.split(r"(?m)^Sink #", text)[1:]:
+            lines = block.splitlines()
+            sink_id = lines[0].strip() if lines else ""
+            name_match = re.search(r"(?m)^\s*Name:\s*(.+)$", block)
+            description_match = re.search(r"(?m)^\s*Description:\s*(.+)$", block)
+            active_match = re.search(r"(?m)^\s*Active Port:\s*(.+)$", block)
+            sink_name = name_match.group(1).strip() if name_match else ""
+            sink_description = description_match.group(1).strip() if description_match else sink_name
+            active_port = active_match.group(1).strip() if active_match else ""
+            section = re.search(r"(?ms)^\s*Ports:\s*\n(.*?)(?=^\s*Active Port:|\Z)", block)
+            if not sink_id.isdigit() or not sink_name or not section:
+                continue
+            for line in section.group(1).splitlines():
+                match = re.match(r"^\s+(.+?):\s+(.+?)\s+\([^()]*available:\s*(yes|no|unknown)[^()]*\)\s*$", line)
+                if not match:
+                    continue
+                port, label, availability = (part.strip() for part in match.groups())
+                if availability == "no":
+                    continue
+                ports.append({"sink": sink_name, "sinkDescription": sink_description,
+                              "port": port, "label": label, "availability": availability,
+                              "selected": port == active_port})
+        return ports
 
     @Slot()
     def refreshOutputs(self):
@@ -852,6 +1031,18 @@ class AtlasAudio(QObject):
                                      capture_output=True, text=True, timeout=3, check=False)
             match = re.search(r"^id\s+(\d+),", default.stdout, re.MULTILINE)
             selected = int(match.group(1)) if default.returncode == 0 and match else -1
+            try:
+                cards = subprocess.run(["pactl", "list", "cards"], capture_output=True,
+                                       text=True, timeout=5, check=False)
+                self._profiles = self._parse_output_profiles(cards.stdout if cards.returncode == 0 else "")
+            except (OSError, subprocess.TimeoutExpired):
+                self._profiles = []
+            try:
+                full_sinks = subprocess.run(["pactl", "list", "sinks"], capture_output=True,
+                                            text=True, timeout=5, check=False)
+                self._ports = self._parse_sink_ports(full_sinks.stdout if full_sinks.returncode == 0 else "")
+            except (OSError, subprocess.TimeoutExpired):
+                self._ports = []
             outputs = []
             for node in nodes:
                 props = node.get("info", {}).get("props", {})
@@ -873,9 +1064,44 @@ class AtlasAudio(QObject):
                                                                "seçilemedi"))
         except (OSError, subprocess.TimeoutExpired, ValueError, TypeError):
             self._outputs = []
+            self._profiles = []
+            self._ports = []
             self._selected_output = -1
             self._output_status = "Ses çıkışları okunamadı; PipeWire/WirePlumber durumunu kontrol edin."
         self.changed.emit()
+
+    @Slot(str, str)
+    def selectCardProfile(self, card_id, profile):
+        card_id = str(card_id)
+        if not any(item["cardId"] == card_id and item["profile"] == profile for item in self._profiles):
+            self._output_status = "Bu kart profili listede yok veya kullanılamıyor."
+            self.changed.emit()
+            return
+        try:
+            subprocess.run(["pactl", "set-card-profile", card_id, profile],
+                           capture_output=True, text=True, timeout=5, check=True)
+        except (OSError, subprocess.SubprocessError):
+            self._output_status = "Ses kartı profili değiştirilemedi."
+            self.changed.emit()
+            return
+        self.refreshOutputs()
+        self.refresh()
+
+    @Slot(str, str)
+    def selectOutputPort(self, sink_name, port_name):
+        if not any(item["sink"] == sink_name and item["port"] == port_name for item in self._ports):
+            self._output_status = "Bu ses bağlantı noktası listede yok veya kullanılamıyor."
+            self.changed.emit()
+            return
+        try:
+            subprocess.run(["pactl", "set-sink-port", sink_name, port_name],
+                           capture_output=True, text=True, timeout=5, check=True)
+        except (OSError, subprocess.SubprocessError):
+            self._output_status = "Ses bağlantı noktası değiştirilemedi."
+            self.changed.emit()
+            return
+        self.refreshOutputs()
+        self.refresh()
 
     @Slot(int)
     def selectOutput(self, node_id):
@@ -1053,6 +1279,18 @@ class AtlasPreferences(QObject):
         # session-wide Xft DPI here caused a second, external scale change that
         # could leave other windows and the WM with stale geometry on mode flips.
 
+    @Slot(float)
+    def setBrowserScaleFactor(self, factor):
+        """Pass Atlas current logical UI density to Chromium on its next launch."""
+        try:
+            factor = float(factor)
+        except (TypeError, ValueError):
+            factor = 1.0
+        if not math.isfinite(factor):
+            factor = 1.0
+        factor = max(1.0, min(2.0, factor))
+        os.environ["ATLASOS_CHROME_SCALE_FACTOR"] = f"{factor:.2f}"
+
     @Slot()
     def applyCurrentDisplayMode(self):
         self._apply_desktop_scale()
@@ -1162,7 +1400,9 @@ def main():
     if not engine.rootObjects():
         print("AtlasOS QML could not be loaded: " + path, file=sys.stderr)
         return 1
-    engine.rootObjects()[0].setProperty("atlasPreferences", preferences)
+    root_window = engine.rootObjects()[0]
+    root_window.setProperty("atlasPreferences", preferences)
+    preferences.setBrowserScaleFactor(root_window.property("interfaceScale") if root_window.property("boardMode") else 1.0)
     if os.environ.get("ATLASOS_VALIDATE_DISPLAY_CYCLE") == "1":
         window = engine.rootObjects()[0]
         size = os.environ.get("ATLASOS_WINDOW_SIZE", "1366x768")
@@ -1309,6 +1549,20 @@ def main():
             image = window.screen().grabWindow(capture_target)
             if not image.save(screenshot):
                 print("AtlasOS screenshot failed", file=sys.stderr)
+            screen = window.screen()
+            screen_geometry = screen.geometry()
+            scale = window.property("interfaceScale")
+            board_mode = window.property("boardMode")
+            print(
+                "AtlasOS display:",
+                f"physical={round(screen_geometry.width() * screen.devicePixelRatio())}x{round(screen_geometry.height() * screen.devicePixelRatio())}",
+                f"logical={screen_geometry.width()}x{screen_geometry.height()}",
+                f"window={window.width()}x{window.height()}",
+                f"DPR={screen.devicePixelRatio():g}",
+                f"interfaceScale={scale}",
+                f"boardMode={board_mode}",
+                f"capture={image.width()}x{image.height()}",
+            )
             app.quit()
 
         QTimer.singleShot(2200, capture)

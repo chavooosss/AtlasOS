@@ -27,7 +27,7 @@ EOF
   esac
 done
 if [[ ! "${ATLAS_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
-  echo "ATLASOS_VERSION must be a version such as 0.6.2: ${ATLAS_VERSION}" >&2
+  echo "ATLASOS_VERSION must be a version such as 0.6.4: ${ATLAS_VERSION}" >&2
   exit 64
 fi
 if [[ "${ISO_NAME}" == */* || "${ISO_NAME}" != *.iso || "${ISO_NAME}" == ".iso" ]]; then
@@ -189,10 +189,18 @@ assert_output_available() {
 }
 
 write_build_metadata() {
-  local iso_hash iso_size build_time
+  local iso_hash iso_size build_time source_commit source_diff_hash source_untracked_count
   iso_hash="$(sha256sum "${LATEST_ISO}" | awk '{print $1}')"
   iso_size="$(stat -c %s "${LATEST_ISO}")"
   build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  source_commit="unavailable"
+  source_diff_hash="unavailable"
+  source_untracked_count="unknown"
+  if command -v git >/dev/null 2>&1 && git -C "${PROJECT_ROOT}" rev-parse --verify HEAD >/dev/null 2>&1; then
+    source_commit="$(git -C "${PROJECT_ROOT}" rev-parse HEAD)"
+    source_diff_hash="$(git -C "${PROJECT_ROOT}" diff --binary HEAD | sha256sum | awk '{print $1}')"
+    source_untracked_count="$(git -C "${PROJECT_ROOT}" ls-files --others --exclude-standard | wc -l | tr -d '[:space:]')"
+  fi
   printf '%s  %s\n' "${iso_hash}" "${ISO_NAME}" > "${LATEST_ISO}.sha256"
   printf '%s  %s\n' "${iso_hash}" "${ISO_NAME}" > "${LATEST_DIR}/SHA256SUMS.txt"
   cat > "${LATEST_DIR}/BUILD-INFO.txt" <<EOF
@@ -200,7 +208,9 @@ AtlasOS version: ${ATLAS_VERSION}
 Build profile: base-live-iso (not Atlas Boot Manager integrated)
 Build time UTC: ${build_time}
 Build environment: $(. /etc/os-release 2>/dev/null; printf '%s %s' "${PRETTY_NAME:-Linux}" "$(uname -m)")
-Source identifier: unavailable (Git not initialized)
+Source commit: ${source_commit}
+Tracked working-tree diff SHA-256: ${source_diff_hash}
+Untracked source file count: ${source_untracked_count}
 Build options: ATLASOS_PACKAGE_ONLY=${ATLASOS_PACKAGE_ONLY:-0}
 live-build: $(lb --version 2>&1 | head -1)
 xorriso: $(xorriso -version 2>&1 | head -1)

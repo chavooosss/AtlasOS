@@ -1,6 +1,8 @@
+import hashlib
 import importlib.util
 import io
 import json
+import os
 import pathlib
 import runpy
 import tempfile
@@ -152,6 +154,10 @@ class StorageSafetyTests(unittest.TestCase):
             archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261003T100000Z.zip")
             result = self.fixtures.policy().export(archive, usb, "46")
             self.assertEqual(pathlib.Path(result).read_bytes(), archive.read_bytes())
+            self.assertEqual(
+                hashlib.sha256(pathlib.Path(result).read_bytes()).digest(),
+                hashlib.sha256(archive.read_bytes()).digest(),
+            )
             self.assertTrue(zipfile.is_zipfile(result))
             self.assertFalse(any(path.name.endswith(".partial") for path in pathlib.Path(usb).iterdir()))
             with self.assertRaises(PermissionError):
@@ -192,9 +198,11 @@ class StorageSafetyTests(unittest.TestCase):
                 return original(destination, expected_mount_id)
 
             with patch.object(policy, "authorize_destination", side_effect=interrupt_copy):
-                with self.assertRaises(PermissionError):
+                with self.assertRaisesRegex(OSError, "simulated USB removal.*empty file"):
                     policy.export(archive, usb, "47")
-            self.assertEqual(list(pathlib.Path(usb).iterdir()), [])
+            failed_output = pathlib.Path(usb) / archive.name
+            self.assertTrue(failed_output.exists())
+            self.assertEqual(failed_output.stat().st_size, 0, "Failed export must leave no corrupt bytes presented as a completed ZIP.")
 
     def test_live_usb_unknown_and_unmounted_internal_are_never_exportable(self):
         self.fixtures.device("sda", "8:0", usb=True)
@@ -224,9 +232,11 @@ class StorageSafetyTests(unittest.TestCase):
                     self.fixtures.mountinfo.write_text("")
                 return original(destination, expected_mount_id)
             with patch.object(policy, "authorize_destination", side_effect=remove_after_initial_validation):
-                with self.assertRaises(PermissionError):
+                with self.assertRaisesRegex(OSError, "block aygıtı doğrulanamadı.*empty file"):
                     policy.export(archive, usb, "48")
-            self.assertFalse((pathlib.Path(usb) / archive.name).exists())
+            failed_output = pathlib.Path(usb) / archive.name
+            self.assertTrue(failed_output.exists())
+            self.assertEqual(failed_output.stat().st_size, 0, "USB loss must not leave a corrupt archive presented as complete.")
 
     def test_insufficient_space_stops_before_copy(self):
         with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
@@ -239,6 +249,7 @@ class StorageSafetyTests(unittest.TestCase):
                 with self.assertRaises(OSError):
                     self.fixtures.policy().export(archive, usb, "49")
             self.assertFalse((pathlib.Path(usb) / archive.name).exists())
+            self.assertEqual(list(pathlib.Path(usb).iterdir()), [], "Insufficient space must not leave a partial file.")
 
     def test_export_is_denied_when_live_boot_device_is_unknown(self):
         with tempfile.TemporaryDirectory() as usb:
@@ -249,6 +260,207 @@ class StorageSafetyTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 policy.authorize_destination(usb)
 
+    def test_current_version_bundle_name_is_accepted_for_export(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="52", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120000Z.zip")
+            result = self.fixtures.policy().export(archive, usb, "52")
+            self.assertEqual(pathlib.Path(result).read_bytes(), archive.read_bytes())
+            self.assertFalse(any(path.name.endswith(".partial") for path in pathlib.Path(usb).iterdir()))
+
+    def test_export_rejects_archive_from_a_different_release_version(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="54", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / "AtlasOS-Diagnostics-0.6.2-20261016T120002Z.zip")
+            with self.assertRaises(ValueError):
+                self.fixtures.policy().export(archive, usb, "54")
+            self.assertEqual(list(pathlib.Path(usb).iterdir()), [])
+
+    def test_export_does_not_overwrite_an_existing_bundle(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="53", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120001Z.zip")
+            existing = pathlib.Path(usb) / archive.name
+            old_bytes = b"existing user file must remain byte-for-byte unchanged"
+            existing.write_bytes(old_bytes)
+            with self.assertRaises(FileExistsError):
+                self.fixtures.policy().export(archive, usb, "53")
+            self.assertEqual(existing.read_bytes(), old_bytes)
+
+    def test_target_created_immediately_before_exclusive_open_is_preserved(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="54", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120003Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            rival_bytes = b"rival file created at exclusive-open boundary"
+            real_open = diag.os.open
+            injected = False
+
+            def create_rival_before_exclusive_open(path, flags, *args, **kwargs):
+                nonlocal injected
+                if path == archive.name and flags & diag.os.O_EXCL:
+                    injected = True
+                    target.write_bytes(rival_bytes)
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch.object(diag.os, "open", side_effect=create_rival_before_exclusive_open):
+                with self.assertRaises(FileExistsError):
+                    self.fixtures.policy().export(archive, usb, "54")
+            self.assertTrue(injected)
+            self.assertEqual(target.read_bytes(), rival_bytes)
+
+    def test_write_failure_is_not_reported_as_success_and_owned_file_is_zeroed(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="55", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120004Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            real_write = diag.os.write
+            write_count = 0
+
+            def fail_after_partial_write(fd, data):
+                nonlocal write_count
+                write_count += 1
+                if write_count == 1:
+                    return real_write(fd, data[:64])
+                raise OSError(diag.errno.ENOSPC, "simulated USB full during write")
+
+            with patch.object(diag.os, "write", side_effect=fail_after_partial_write):
+                with self.assertRaisesRegex(OSError, "simulated USB full.*Export failed"):
+                    self.fixtures.policy().export(archive, usb, "55")
+            self.assertTrue(target.exists())
+            self.assertEqual(target.stat().st_size, 0)
+            self.assertFalse(zipfile.is_zipfile(target))
+
+    def test_path_replacement_during_write_preserves_rival_and_never_reports_success(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="56", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120005Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            rival_bytes = b"replacement belongs to another process"
+            policy = self.fixtures.policy()
+            original_authorize = policy.authorize_destination
+            calls = 0
+
+            real_write = diag.os.write
+            replaced = False
+
+            def replace_owned_path_after_first_write(fd, data):
+                nonlocal replaced
+                written = real_write(fd, data)
+                if not replaced and target.exists() and target.stat().st_size:
+                    target.unlink()
+                    target.write_bytes(rival_bytes)
+                    replaced = True
+                return written
+
+            with patch.object(diag.os, "write", side_effect=replace_owned_path_after_first_write):
+                with self.assertRaisesRegex(OSError, "girdisi aktarım sırasında değişti"):
+                    policy.export(archive, usb, "56")
+            self.assertEqual(target.read_bytes(), rival_bytes)
+
+    def test_failed_cleanup_keeps_primary_error_and_never_unlinks_by_path(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="57", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120006Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            real_write = diag.os.write
+            writes = 0
+
+            def fail_write_after_first_chunk(fd, data):
+                nonlocal writes
+                writes += 1
+                if writes == 1:
+                    return real_write(fd, data[:64])
+                raise OSError(diag.errno.EIO, "primary write failure")
+
+            with (
+                patch.object(diag.os, "write", side_effect=fail_write_after_first_chunk),
+                patch.object(diag.os, "ftruncate", side_effect=OSError(diag.errno.EIO, "secondary truncate failure")),
+                patch.object(diag.os, "unlink", side_effect=AssertionError("pathname deletion is forbidden")) as unlink,
+            ):
+                with self.assertRaisesRegex(OSError, "primary write failure.*cleanup failed") as raised:
+                    self.fixtures.policy().export(archive, usb, "57")
+            unlink.assert_not_called()
+            self.assertIsInstance(raised.exception.__cause__, OSError)
+            self.assertEqual(raised.exception.__cause__.errno, diag.errno.EIO)
+            self.assertIn("secondary truncate failure", str(raised.exception))
+            self.assertTrue(target.exists())
+
+    def test_complete_archive_is_retained_if_post_write_mount_check_fails(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="58", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120007Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            policy = self.fixtures.policy()
+            original_authorize = policy.authorize_destination
+            calls = 0
+
+            def fail_at_post_write_check(destination, expected_mount_id=None):
+                nonlocal calls
+                calls += 1
+                if calls == 5:
+                    raise PermissionError("simulated mount change after completed write")
+                return original_authorize(destination, expected_mount_id)
+
+            with patch.object(policy, "authorize_destination", side_effect=fail_at_post_write_check):
+                with self.assertRaisesRegex(OSError, "doğrulandı.*final dosya silinmedi"):
+                    policy.export(archive, usb, "58")
+            self.assertEqual(target.read_bytes(), archive.read_bytes())
+            self.assertTrue(zipfile.is_zipfile(target))
+
+    def test_directory_entry_replacement_after_open_cannot_pass_identity_check(self):
+        with tempfile.TemporaryDirectory() as usb, tempfile.TemporaryDirectory() as volatile:
+            self.fixtures.device("sda", "8:0", usb=True)
+            self.fixtures.device("sdb", "8:16", usb=True)
+            self.fixtures.boot_mount()
+            self.fixtures.mount("8:16", usb, mount_id="59", source="/dev/sdb")
+            archive = write_valid_bundle(pathlib.Path(volatile) / f"AtlasOS-Diagnostics-{diag.VERSION}-20261016T120008Z.zip")
+            target = pathlib.Path(usb) / archive.name
+            rival_bytes = b"different file was installed at final path"
+            policy = self.fixtures.policy()
+            original_authorize = policy.authorize_destination
+            calls = 0
+
+            real_write = diag.os.write
+            replaced = False
+
+            def replace_after_first_write(fd, data):
+                nonlocal replaced
+                written = real_write(fd, data)
+                if not replaced and target.exists() and target.stat().st_size:
+                    target.unlink()
+                    target.write_bytes(rival_bytes)
+                    replaced = True
+                return written
+
+            with patch.object(diag.os, "write", side_effect=replace_after_first_write):
+                with self.assertRaisesRegex(OSError, "girdisi aktarım sırasında değişti"):
+                    policy.export(archive, usb, "59")
+            self.assertEqual(target.read_bytes(), rival_bytes)
 
 class DiagnosticsCollectorTests(unittest.TestCase):
     def test_privileged_helper_rejects_arguments_and_non_root_invocation(self):
@@ -357,6 +569,7 @@ class DiagnosticsCollectorTests(unittest.TestCase):
                     diag.DiagnosticsCollector._validate_runtime_directory(runtime, expected_uid=uid + 1, user_root=root)
 
     def test_bundle_is_generated_in_injected_volatile_area_and_privacy_filtered(self):
+        self.assertEqual(diag.VERSION, "0.6.4")
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             proc = root / "proc"
@@ -370,12 +583,21 @@ class DiagnosticsCollectorTests(unittest.TestCase):
             (proc / "uptime").write_text("42.00 21.00\n")
             (proc / "loadavg").write_text("0.10 0.20 0.30 1/100 777\n")
             (proc / "cmdline").write_text("quiet splash root=UUID=12345678-abcd-1234-abcd-123456789abc\n")
+            (proc / "asound").mkdir()
+            (proc / "asound/cards").write_text(" 0 [PCH            ]: HDA-Intel - HDA Intel PCH\n")
             (proc / "sys/kernel").mkdir(parents=True)
             (proc / "sys/kernel/osrelease").write_text("6.12-test\n")
             mountinfo = root / "mountinfo"
             mountinfo.write_text("")
             def runner(argv):
                 output = "" if argv[0] == "systemctl" else "/home/veli test aa:bb:cc:dd:ee:ff 192.168.1.20 password=hunter2 user=veli UID=1000\n"
+                if argv[0] == "journalctl":
+                    output += "\n".join((
+                        "NetworkManager: Config: added 'ssid' value 'Fake Archive Network Name'",
+                        "NetworkManager: device (wlan0): Activation: (wifi) access point 'Fake Archive AP' has security",
+                        'NetworkManager: device (wlan0): Activation successful. Connected to wireless network "Fake Archive Connected"',
+                        "NetworkManager: device (wlan0): state change: config -> activated",
+                    )) + "\n"
                 return SimpleNamespace(returncode=0, stdout=output, stderr="")
             collector = diag.DiagnosticsCollector(sysroot, proc, root, runner, mountinfo, volatile)
             progress = []
@@ -383,12 +605,19 @@ class DiagnosticsCollectorTests(unittest.TestCase):
             self.assertTrue(result["ok"])
             self.assertGreater(result["size_bytes"], 0)
             self.assertTrue(pathlib.Path(result["bundle"]).is_relative_to(volatile))
-            self.assertEqual([value for _, value in progress], [10, 25, 40, 60, 78, 92])
+            self.assertEqual([value for _, value in progress], [10, 25, 40, 60, 78, 92, 93, 94, 95, 96, 97, 98, 99])
             with zipfile.ZipFile(result["bundle"]) as bundle:
                 names = set(bundle.namelist())
                 self.assertIn("summary.json", names)
+                self.assertEqual(json.loads(bundle.read("atlas/version.json")), {"version": "0.6.4"})
                 self.assertIn("boot/physical-video-observations.json", names)
                 self.assertIn("collection/manifest.json", names)
+                self.assertIn("audio/output-route.json", names)
+                self.assertIn("system/time-sync.json", names)
+                self.assertIn("network/https-connectivity.json", names)
+                self.assertIn("browser/browser-and-ca-status.json", names)
+                self.assertIn("field/physical-observations.json", names)
+                self.assertIn("audio/recent-audio-service-log.txt", names)
                 log = bundle.read("graphics/lspci.txt").decode()
                 self.assertNotIn("veli", log)
                 self.assertNotIn("hunter2", log)
@@ -396,12 +625,168 @@ class DiagnosticsCollectorTests(unittest.TestCase):
                 self.assertNotIn("UID=1000", log)
                 self.assertNotIn("192.168.1.20", log)
                 summary = json.loads(bundle.read("summary.json"))
-                self.assertEqual(summary["schema_version"], 1)
+                self.assertEqual(summary["schema_version"], 2)
                 self.assertEqual(summary["storage_safety_state"], "INTERNAL_READ_ONLY_UNKNOWN_PROTECTED")
                 self.assertIn("atlas_ui", summary)
                 self.assertNotIn("12345678-abcd-1234-abcd-123456789abc", bundle.read("summary.json").decode())
                 observations = json.loads(bundle.read("boot/physical-video-observations.json"))
                 self.assertTrue(all(value is None for value in observations.values()))
+                field = json.loads(bundle.read("field/physical-observations.json"))
+                self.assertEqual(field["observations"]["speaker_test"]["value"], "not_tested")
+                self.assertFalse(field["urls_or_page_contents_collected"])
+                manifest = json.loads(bundle.read("collection/manifest.json"))
+                self.assertEqual(manifest["schema_version"], 2)
+                self.assertIn("SSIDs and Wi-Fi profile names in supported log formats", manifest["sanitization"])
+                archive_payload = b"\n".join(bundle.read(name) for name in names)
+                for fake_ssid in (b"Fake Archive Network Name", b"Fake Archive AP", b"Fake Archive Connected"):
+                    self.assertNotIn(fake_ssid, archive_payload)
+                network_log = bundle.read("network/recent-network-events.txt").decode()
+                self.assertIn("state change: config -> activated", network_log)
+                self.assertIn("Activation successful", network_log)
+                self.assertTrue({
+                    "audio/output-route.json", "system/time-sync.json", "network/https-connectivity.json",
+                    "browser/browser-and-ca-status.json", "field/physical-observations.json",
+                }.issubset(set(manifest["files"])))
+
+    def test_https_probe_keeps_tls_verification_and_only_records_issuer(self):
+        calls = []
+        def runner(argv):
+            calls.append(argv)
+            return SimpleNamespace(returncode=60, stdout="000|60", stderr="*  issuer: O=School Network, CN=Inspection CA\nAuthorization: private-value")
+        collector = diag.DiagnosticsCollector(command_runner=runner)
+        result = collector._https_probe("affected_site", "chavooosss.github.io")
+        self.assertEqual(result["category"], "certificate")
+        self.assertEqual(result["tls_verify_result"], 60)
+        self.assertEqual(result["presented_issuer"], "O=School Network, CN=Inspection CA")
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("--insecure", calls[0])
+        self.assertIn("https://chavooosss.github.io/", calls[0])
+        self.assertNotIn("Authorization", json.dumps(result))
+
+    def test_network_diagnostics_probe_only_fixed_hosts_and_store_no_proxy_values(self):
+        calls = []
+        def runner(argv):
+            calls.append(argv)
+            if argv[0] == "curl":
+                return SimpleNamespace(returncode=0, stdout="200|0", stderr="*  issuer: C=US, O=Public CA, CN=Example Issuer")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        collector = diag.DiagnosticsCollector(command_runner=runner)
+        with patch.dict("os.environ", {"https_proxy": "http://user:password@proxy.internal:8080"}):
+            result = collector._network_diagnostics()
+        self.assertTrue(result["proxy_environment_configured"])
+        self.assertEqual([item["host"] for item in result["probes"]],
+                         ["chavooosss.github.io", "example.com", "www.eba.gov.tr",
+                          "ogmmateryal.eba.gov.tr", "mebi.eba.gov.tr"])
+        self.assertTrue(all(item["tls_verification"] == "enabled" for item in result["probes"]))
+        self.assertNotIn("proxy.internal", json.dumps(result))
+        self.assertNotIn("password", json.dumps(result))
+        curl_calls = [call for call in calls if call[0] == "curl"]
+        self.assertEqual(len(curl_calls), 5)
+        self.assertTrue(all("--insecure" not in call for call in curl_calls))
+
+    def test_field_observations_allow_only_non_sensitive_enumerated_values(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            proc = root / "proc"
+            proc.mkdir()
+            volatile = root / "volatile"
+            mountinfo = root / "mountinfo"
+            mountinfo.write_text("")
+            collector = diag.DiagnosticsCollector(root / "sys", proc, root,
+                lambda _argv: SimpleNamespace(returncode=0, stdout="", stderr=""),
+                mountinfo_path=mountinfo, volatile_root=volatile)
+            result = collector.collect_all(observations={
+                "speaker_test": {"value": "silent", "recorded_at_utc": "2026-10-16T12:00:00+00:00"},
+                "chrome_navigation": {"value": "certificate_authority_invalid", "recorded_at_utc": "2026-10-16T12:00:00+00:00"},
+                "extra": {"value": "https://school.example/private?token=secret"},
+            })
+            with zipfile.ZipFile(result["bundle"]) as bundle:
+                data = bundle.read("field/physical-observations.json").decode()
+                self.assertIn("certificate_authority_invalid", data)
+                self.assertIn("silent", data)
+                self.assertNotIn("school.example", data)
+                self.assertNotIn("token=secret", data)
+
+    def test_audio_snapshot_is_read_only_and_has_output_route_evidence(self):
+        def runner(argv):
+            if argv[0] == "wpctl" and argv[1] == "get-volume":
+                output = "Volume: 0.40 [MUTED]\n"
+            elif argv[0] == "wpctl" and argv[1] == "inspect":
+                output = "id 42, type PipeWire:Interface:Node\n\tmedia.class = \"Audio/Sink\"\n\tnode.name = \"alsa_output.pci-0000_00_1f.3.analog-stereo\"\n\tnode.state = \"suspended\"\n\tdevice.description = \"Built-in Audio\"\n"
+            elif argv[:3] == ("pactl", "list", "cards"):
+                output = "Card #2\n        Name: alsa_card.test\n        Profiles:\n                output:analog-stereo: Analog Stereo Output (sinks: 1, sources: 0, priority: 6500, available: yes)\n        Active Profile: output:analog-stereo\n        Ports:\n                analog-output-speaker: Speakers (type: Speaker, priority: 10000, available: yes)\n        Properties:\n                device.serial = \"PRIVATE-SERIAL-987\"\n"
+            elif argv[:3] == ("pactl", "list", "sinks"):
+                output = "Sink #42\n        Name: alsa_output.test.analog\n        Description: Analog Output\n        Ports:\n                analog-output-speaker: Speakers (type: Speaker, priority: 10000, available: yes)\n        Active Port: analog-output-speaker\n        Properties:\n                device.serial = \"PRIVATE-SERIAL-987\"\n"
+            elif argv[0] == "timedatectl":
+                output = "Timezone=Europe/Istanbul\nNTPSynchronized=no\nNTP=yes\nLocalRTC=no\nTimeUSec=2026-10-23T08:24:00Z\n"
+            elif argv[0] == "chronyc":
+                output = "Reference ID : 192.0.2.5\nLeap status : Not synchronised\n"
+            else:
+                output = "card 0: PCH [HDA Intel PCH], device 0: ALC Analog [ALC Analog]\n"
+            return SimpleNamespace(returncode=0, stdout=output, stderr="")
+        collector = diag.DiagnosticsCollector(command_runner=runner)
+        result = collector._audio_diagnostics()
+        self.assertIn("MUTED", result["default_sink_volume_and_mute"])
+        self.assertIn("node.state", result["default_sink_properties"])
+        self.assertIn("Audio/Sink", result["default_sink_properties"])
+        self.assertIn("Built-in Audio", result["default_sink_properties"])
+        self.assertIn("Card #2", result["audio_card_profiles_and_ports"])
+        self.assertIn("output:analog-stereo", result["audio_card_profiles_and_ports"])
+        self.assertIn("analog-output-speaker", result["audio_card_profiles_and_ports"])
+        self.assertNotIn("PRIVATE-SERIAL-987", result["audio_card_profiles_and_ports"])
+        self.assertNotIn("Properties:", result["audio_card_profiles_and_ports"])
+        self.assertIn("Sink #42", result["sink_ports_and_active_port"])
+        self.assertIn("Active Port: analog-output-speaker", result["sink_ports_and_active_port"])
+        self.assertNotIn("PRIVATE-SERIAL-987", result["sink_ports_and_active_port"])
+        self.assertFalse(result["test_tone_played"])
+        self.assertFalse(result["microphone_recording_performed"])
+
+    def test_browser_diagnostics_reports_ca_state_without_profile_data(self):
+        collector = diag.DiagnosticsCollector(command_runner=lambda _argv:
+            SimpleNamespace(returncode=0, stdout="Google Chrome 129.0\n", stderr=""))
+        with patch.object(diag.shutil, "which", return_value="/usr/bin/google-chrome-stable"), \
+             patch.object(diag.Path, "home", return_value=pathlib.Path("/tmp/diagnostic-test-home")), \
+             patch("pathlib.Path.stat", side_effect=FileNotFoundError), \
+             patch("pathlib.Path.is_file", return_value=False):
+            result = collector._browser_diagnostics()
+        self.assertTrue(result["browser"]["available"])
+        self.assertEqual(result["browser"]["version"], "Google Chrome 129.0")
+        self.assertFalse(result["system_ca_bundle"]["available"])
+        self.assertFalse(result["browser_history_collected"])
+        self.assertIsNone(result["atlasos_browser_launcher_log"])
+
+    def test_sanitizer_redacts_url_queries_ssids_and_ipv6(self):
+        text = diag.sanitize_text("url=https://example.com/path?token=abc#fragment ssid=SchoolNet gateway=fe80::1234")
+        self.assertNotIn("token=abc", text)
+        self.assertNotIn("SchoolNet", text)
+        self.assertNotIn("fe80::1234", text)
+        self.assertIn("[PATH/QUERY REDACTED]", text)
+
+    def test_sanitizer_redacts_networkmanager_ssid_and_profile_log_formats(self):
+        raw = "\n".join((
+            "NetworkManager: Config: added 'ssid' value 'Fake Board Network Name'",
+            "NetworkManager: device (wlan0): Activation: starting connection 'profile-id' (Fake Profile Name)",
+            "NetworkManager: device (wlan0): Activation: (wifi) access point 'Fake Access Point' has security",
+            'NetworkManager: device (wlan0): Activation successful. Connected to wireless network "Fake Connected Network"',
+            'NetworkManager: audit: op="connection-add-activate" uuid=11111111-2222-3333-4444-555555555555 name="Fake Audit Profile"',
+            'wpa_supplicant: wlan0: CTRL-EVENT-CONNECTED ssid="Fake WPA Network Name"',
+            "wpa_supplicant: wlan0: SSID=Fake WPA Unquoted Network Name",
+            "NetworkManager: device (wlan0): state change: config -> activated",
+        ))
+        sanitized = diag.sanitize_text(raw)
+        for secret in (
+            "Fake Board Network Name", "Fake Profile Name", "Fake Access Point",
+            "Fake Connected Network", "Fake Audit Profile", "Fake WPA Network Name",
+            "Fake WPA Unquoted Network Name",
+        ):
+            self.assertNotIn(secret, sanitized)
+        self.assertIn("state change: config -> activated", sanitized)
+        self.assertIn("Activation successful", sanitized)
+        self.assertIn("ssid", sanitized)
+
+    def test_sanitization_manifest_describes_ssid_and_profile_redaction(self):
+        description = " ".join(diag.PRIVACY_RULES)
+        self.assertIn("SSIDs and Wi-Fi profile names in supported log formats", description)
 
     def test_collector_uses_no_shell_and_forbidden_commands_are_not_invoked(self):
         source = MODULE.read_text(encoding="utf-8")

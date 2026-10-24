@@ -72,7 +72,10 @@ probe_https() {
     5|97) category="proxy" ;;
     6) category="dns" ;;
     7|28) category="connection" ;;
-    35|51|58|60|77) category="tls" ;;
+    56) category="interrupted" ;;
+    51|60) category="certificate" ;;
+    77) category="ca_store" ;;
+    35|58) category="tls" ;;
     *) category="network" ;;
   esac
   printf '%s=failed category=%s curl_exit=%s\n' "${label}" "${category}" "${status}"
@@ -107,8 +110,14 @@ diagnose_web_access() {
     show_error "Web erişim tanısı bir proxy bağlantı sorunu buldu. Chrome yine açılacak; proxy değerleri kaydedilmedi. Ayrıntılar: ${log}"
   elif [[ "${atlas_kind}" == failed\ category=dns* || "${example_kind}" == failed\ category=dns* ]]; then
     show_error "Web erişim tanısı DNS ad çözümlemesini doğrulayamadı. Chrome yine açılacak; ağ ve DNS bağlantısını kontrol edin. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=certificate* || "${example_kind}" == failed\ category=certificate* ]]; then
+    show_error "HTTPS sertifikası AtlasOS tarafından güvenilir bulunmadı. Okul ağı HTTPS denetimi yapıyorsa yalnızca okul BT biriminin doğruladığı CA sertifikası kullanılmalıdır; sertifika kontrolü kapatılmadı. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=ca_store* || "${example_kind}" == failed\ category=ca_store* ]]; then
+    show_error "HTTPS sertifika deposu okunamadı. Sistem CA paketini ve sertifika deposunu kontrol edin; doğrulama devre dışı bırakılmadı. Ayrıntılar: ${log}"
   elif [[ "${atlas_kind}" == failed\ category=tls* || "${example_kind}" == failed\ category=tls* ]]; then
     show_error "Web erişim tanısı TLS/sertifika el sıkışmasında hata buldu. Güvenlik doğrulaması devre dışı bırakılmadı. Ayrıntılar: ${log}"
+  elif [[ "${atlas_kind}" == failed\ category=interrupted* || "${example_kind}" == failed\ category=interrupted* ]]; then
+    show_error "HTTPS bağlantısı yanıt alınırken kesildi. Ağ geçidi, proxy veya güvenlik filtresi bağlantıyı sonlandırmış olabilir. Ayrıntılar: ${log}"
   else
     show_error "HTTPS bağlantısı doğrulanamadı. Chrome yine açılacak; bağlantı, ağ geçidi ve DNS durumunu kontrol edin. Ayrıntılar: ${log}"
   fi
@@ -205,7 +214,21 @@ fi
 diagnose_web_access "${url}"
 
 for attempt in 1 2; do
-  if "${browser}" --new-window "${url}" >/dev/null 2>&1; then
+  browser_args=(--new-window)
+  case "$(basename "${browser}")" in
+    google-chrome*|chromium*)
+      browser_scale="${ATLASOS_CHROME_SCALE_FACTOR:-1.0}"
+      if [[ "${browser_scale}" =~ ^[0-9]+([.][0-9]+)?$ ]] && awk -v scale="${browser_scale}" 'BEGIN { exit !(scale >= 1 && scale <= 2) }'; then
+        if awk -v scale="${browser_scale}" 'BEGIN { exit !(scale > 1.01) }'; then
+          browser_args+=("--force-device-scale-factor=${browser_scale}")
+        fi
+      else
+        browser_scale="1.0"
+      fi
+      printf 'Chromium UI scale for next launch: %s (close all browser windows to apply after a mode change)\n' "${browser_scale}" >>"${log}"
+      ;;
+  esac
+  if "${browser}" "${browser_args[@]}" "${url}" >/dev/null 2>&1; then
     exit 0
   else
     status=$?

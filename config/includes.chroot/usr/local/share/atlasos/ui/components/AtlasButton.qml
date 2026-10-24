@@ -14,8 +14,17 @@ Controls.Button {
     font.bold: variant === "primary" || checked
     padding: 14 * controlScale
     spacing: 9 * controlScale
+    implicitWidth: Math.max(theme.controlHeight * controlScale,
+                            buttonLabelMetrics.advanceWidth + padding * 2 + control.font.pixelSize * 0.5
+                            + (iconName !== "" ? 20 * controlScale + spacing : 0))
     implicitHeight: Math.max(theme.controlHeight * controlScale, contentItem.implicitHeight + padding * 2)
     focusPolicy: Qt.StrongFocus
+
+    TextMetrics {
+        id: buttonLabelMetrics
+        font: control.font
+        text: control.loading ? "Yükleniyor…" : control.text
+    }
 
     background: Rectangle {
         radius: theme.radiusSmall * controlScale
@@ -32,9 +41,10 @@ Controls.Button {
     }
 
     contentItem: Row {
-        spacing: control.spacing
-        anchors.centerIn: parent
+        id: buttonContent
+        spacing: control.iconName !== "" ? control.spacing : 0
         AtlasIcon {
+            id: buttonIcon
             visible: control.iconName !== ""
             width: 20 * control.controlScale
             height: width
@@ -43,11 +53,14 @@ Controls.Button {
             strokeColor: !control.enabled ? (control.variant === "darkSecondary" ? theme.shellMutedText : theme.disabledInk) : (control.variant === "primary" || control.variant === "danger") ? theme.surface : control.variant === "darkSecondary" ? theme.shellText : theme.ink
         }
         Text {
+            id: buttonLabel
             text: control.loading ? "Yükleniyor…" : control.text
+            width: Math.max(0, control.availableWidth - (buttonIcon.visible ? buttonIcon.width + buttonContent.spacing : 0))
             color: !control.enabled ? (control.variant === "darkSecondary" ? theme.shellMutedText : theme.disabledInk) : (control.variant === "primary" || control.variant === "danger") ? theme.surface : control.variant === "darkSecondary" ? theme.shellText : theme.ink
             font: control.font
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
+            wrapMode: Text.NoWrap
             elide: Text.ElideRight
         }
     }

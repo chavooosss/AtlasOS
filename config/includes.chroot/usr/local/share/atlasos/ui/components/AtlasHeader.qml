@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Window
 import "../theme"
 
 Rectangle {
@@ -13,6 +14,8 @@ Rectangle {
     property bool boardMode: false
     property real scaleFactor: 1.0
     readonly property real densityScale: boardMode ? scaleFactor : 1.0
+    // Keep this popup readable in board mode while respecting shorter logical viewports.
+    readonly property real quickSettingsDensity: boardMode ? Math.min(scaleFactor, Math.max(0.9, (Screen.height - header.height - 24) / (600 + (header.width < 1450 ? 40 : 48)))) : 1.0
     property int notificationCount: 0
     property date currentTime: new Date()
     property bool compact: width < 1180
@@ -186,10 +189,10 @@ Rectangle {
     Popup {
         id: audioPopup
         objectName: "atlasAudioPopup"
-        x: Math.max(12, header.width - width - 22)
-        y: header.height + 8
-        width: Math.min(header.width - 24, header.width < 1450 ? 506 : 594)
-        padding: header.width < 1450 ? 20 : 24
+        x: Math.max(12 * header.quickSettingsDensity, header.width - width - 22 * header.quickSettingsDensity)
+        y: header.height + 8 * header.quickSettingsDensity
+        width: Math.min(header.width - 24 * header.quickSettingsDensity, (header.width < 1450 ? 506 : 594) * header.quickSettingsDensity)
+        padding: (header.width < 1450 ? 20 : 24) * header.quickSettingsDensity
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -200,7 +203,9 @@ Rectangle {
             border.width: 1
         }
         contentItem: AtlasQuickSettings {
+            id: quickSettings
             width: audioPopup.width - audioPopup.leftPadding - audioPopup.rightPadding
+            density: header.quickSettingsDensity
             compact: header.width < 1450
             audioController: header.audioController
             networkController: header.networkController
