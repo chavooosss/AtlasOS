@@ -25,8 +25,42 @@ Window {
     // so large logical 4K desktops do not make fixed-size component internals
     // grow out of proportion. A 4K DPR 2 display arrives here as 1920x1080.
     property real interfaceScale: root.boardMode ? Math.min(2.0, Math.max(root.width < 1440 ? 1.16 : 1.32, Math.min(root.width / 1920, root.height / 1080) * 1.32)) : root.width >= 1600 ? 1.08 : root.width >= 1366 ? 0.90 : 0.82
-    onInterfaceScaleChanged: if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(boardMode ? interfaceScale : 1.0)
-    onBoardModeChanged: if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(boardMode ? interfaceScale : 1.0)
+    // Page zoom is independent from toolbar and tab sizing. Preserve the
+    // current 1080p/1440p behavior, and use 200% at physical 4K in board mode.
+    property real browserContentZoomFactor: {
+        if (!root.boardMode) return 1.0
+        var dpr = Math.max(1.0, Screen.devicePixelRatio)
+        var physicalScale = Math.min((root.width * dpr) / 1920, (root.height * dpr) / 1080)
+        return Math.max(1.0, Math.min(2.0, physicalScale))
+    }
+    // Keep browser chrome separate from page zoom. The 4K board gets larger
+    // touch controls; existing 1080p and 1440p values remain unchanged.
+    property real browserUiScale: {
+        if (!root.boardMode) return 1.0
+        var dpr = Math.max(1.0, Screen.devicePixelRatio)
+        var physicalScale = Math.min((root.width * dpr) / 1920, (root.height * dpr) / 1080)
+        if (physicalScale >= 1.9) return 1.75
+        return Math.max(1.32, Math.min(1.5, physicalScale * 1.32))
+    }
+    // At 4K, external Chrome and the embedded browser share the same chrome
+    // density. Other resolutions retain the established Chrome density.
+    property real chromeScaleFactor: {
+        if (!root.boardMode) return 1.0
+        var dpr = Math.max(1.0, Screen.devicePixelRatio)
+        var physicalScale = Math.min((root.width * dpr) / 1920, (root.height * dpr) / 1080)
+        return physicalScale >= 1.9 ? browserUiScale : interfaceScale
+    }
+    property int smartboardAudioProfileAttempts: 0
+    onChromeScaleFactorChanged: if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(chromeScaleFactor)
+    onBoardModeChanged: {
+        if (atlasPreferences) atlasPreferences.setBrowserScaleFactor(chromeScaleFactor)
+        if (boardMode) {
+            smartboardAudioProfileAttempts = 0
+            smartboardAudioProfileTimer.start()
+        } else {
+            smartboardAudioProfileTimer.stop()
+        }
+    }
     property string workspaceTitle: ""
     property bool notificationsOpen: false
     property var lessons: []
@@ -57,15 +91,16 @@ Window {
         }
         atlasApps.track(target)
         var sources = {
-            eba: {title: "EBA", url: "https://www.eba.gov.tr/"},
-            ogm: {title: "OGM Materyal", url: "https://ogmmateryal.eba.gov.tr/"},
-            mebi: {title: "MEBİ", url: "https://mebi.eba.gov.tr/"},
-            geogebra: {title: "GeoGebra", url: "https://www.geogebra.org/calculator"}
+            eba: {title: "EBA", platform: "eba"},
+            meb: {title: "MEB", platform: "meb"},
+            ogm: {title: "OGM Materyal", platform: "ogm"},
+            mebi: {title: "MEBİ", platform: "mebi"},
+            geogebra: {title: "GeoGebra", platform: "geogebra"}
         }
         if (sources[target]) {
             workspaceTitle = sources[target].title
             viewMode = "web"
-            browser.open(sources[target].url)
+            browser.open(sources[target].platform)
         } else if (target === "launcher") {
             launcher.open()
         } else if (target === "browser") {
@@ -290,7 +325,22 @@ Window {
         }
     }
 
-    Component.onCompleted: { loadLessons(); loadStatus() }
+    Component.onCompleted: {
+        loadLessons()
+        loadStatus()
+        if (boardMode) smartboardAudioProfileTimer.start()
+    }
+    Timer {
+        id: smartboardAudioProfileTimer
+        interval: 1800
+        repeat: true
+        onTriggered: {
+            smartboardAudioProfileAttempts++
+            var finalAttempt = smartboardAudioProfileAttempts >= 8
+            if (!atlasAudio || atlasAudio.configureSmartboardProfile(finalAttempt) || finalAttempt)
+                stop()
+        }
+    }
     Timer { interval: 5000; running: true; repeat: true; onTriggered: root.loadStatus() }
     Timer { interval: 1000; running: root.activeLessonTitle.length > 0; repeat: true; onTriggered: root.activeLessonElapsedSeconds++ }
     Timer {
@@ -448,19 +498,19 @@ Window {
         Rectangle {
             id: toolbar
             anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-            visible: ["settings", "network", "files"].indexOf(root.viewMode) < 0 && !(root.viewMode === "pdf" && root.pdfFullscreen)
+            visible: root.viewMode !== "web" && ["settings", "network", "files"].indexOf(root.viewMode) < 0 && !(root.viewMode === "pdf" && root.pdfFullscreen)
             height: visible ? 70 * root.interfaceScale : 0; color: "#f7faff"; border.color: theme.line
             Row {
                 anchors.left: parent.left; anchors.leftMargin: 18 * root.interfaceScale
                 anchors.verticalCenter: parent.verticalCenter; spacing: 9 * root.interfaceScale
                 Rectangle {
                     width: 64 * root.interfaceScale; height: 64 * root.interfaceScale; radius: 10; color: "#edf4fa"
-                    AtlasIcon { anchors.centerIn: parent; name: "arrow-left"; strokeColor: theme.ink }
+                    AtlasIcon { anchors.centerIn: parent; width: 28 * root.interfaceScale; height: 28 * root.interfaceScale; name: "arrow-left"; strokeColor: theme.ink }
                     MouseArea { anchors.fill: parent; onClicked: root.workspaceBack() }
                 }
                 Rectangle {
                     width: 64 * root.interfaceScale; height: 64 * root.interfaceScale; radius: 10; color: "#edf4fa"
-                    AtlasIcon { anchors.centerIn: parent; name: "home"; strokeColor: theme.ink }
+                    AtlasIcon { anchors.centerIn: parent; width: 28 * root.interfaceScale; height: 28 * root.interfaceScale; name: "home"; strokeColor: theme.ink }
                     MouseArea { anchors.fill: parent; onClicked: root.leaveWorkspace() }
                 }
                 Text {
@@ -476,12 +526,12 @@ Window {
                 anchors.verticalCenter: parent.verticalCenter; spacing: 9 * root.interfaceScale
                 Rectangle {
                     width: 64 * root.interfaceScale; height: 64 * root.interfaceScale; radius: 10; color: browser.canGoForward ? "#edf4fa" : "#edf0f2"
-                    AtlasIcon { anchors.centerIn: parent; name: "arrow-right"; strokeColor: browser.canGoForward ? theme.ink : theme.muted }
+                    AtlasIcon { anchors.centerIn: parent; width: 28 * root.interfaceScale; height: 28 * root.interfaceScale; name: "arrow-right"; strokeColor: browser.canGoForward ? theme.ink : theme.muted }
                     MouseArea { anchors.fill: parent; enabled: browser.canGoForward; onClicked: browser.forward() }
                 }
                 Rectangle {
                     width: 64 * root.interfaceScale; height: 64 * root.interfaceScale; radius: 10; color: "#edf4fa"
-                    AtlasIcon { anchors.centerIn: parent; name: "refresh"; strokeColor: theme.ink }
+                    AtlasIcon { anchors.centerIn: parent; width: 28 * root.interfaceScale; height: 28 * root.interfaceScale; name: "refresh"; strokeColor: theme.ink }
                     MouseArea { anchors.fill: parent; onClicked: browser.reload() }
                 }
                 Rectangle {
@@ -497,10 +547,10 @@ Window {
 
         AtlasBrowser {
             id: browser
+            uiScale: root.browserUiScale
+            suggestedContentZoomFactor: root.browserContentZoomFactor
             visible: root.viewMode === "web"
-            anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
-            anchors.left: parent.left; anchors.right: parent.right
-            onExternalBrowserRequested: atlasApps.openExternalBrowser(url)
+            anchors.fill: parent
         }
         AtlasFiles {
             id: filesView

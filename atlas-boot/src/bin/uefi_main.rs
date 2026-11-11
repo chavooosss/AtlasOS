@@ -195,53 +195,26 @@ fn present_countdown(frame: &mut FrameCache, state: &UiState) -> uefi::Result<bo
 fn present_full(gop: &mut GraphicsOutput, canvas: &Canvas) -> uefi::Result {
     let mode = gop.current_mode_info();
     let (width, height) = mode.resolution();
-    let stride = mode.stride();
     let src = canvas.present_bytes();
     if canvas.width != width || canvas.height != height || src.len() != width * height {
         return Err(uefi::Status::DEVICE_ERROR.into());
     }
-    match mode.pixel_format() {
-        PixelFormat::Rgb | PixelFormat::Bgr if stride == width => {
-            let mut fb = gop.frame_buffer();
-            let needed = stride
-                .checked_mul(height)
-                .and_then(|n| n.checked_mul(4))
-                .ok_or(uefi::Status::OUT_OF_RESOURCES)?;
-            if fb.size() < needed {
-                return Err(uefi::Status::DEVICE_ERROR.into());
-            }
-            let dst = unsafe { core::slice::from_raw_parts_mut(fb.as_mut_ptr(), needed) };
-            for y in 0..height {
-                for x in 0..width {
-                    let p = src[y * width + x];
-                    let i = (y * stride + x) * 4;
-                    if mode.pixel_format() == PixelFormat::Rgb {
-                        dst[i] = p[0];
-                        dst[i + 1] = p[1];
-                        dst[i + 2] = p[2]
-                    } else {
-                        dst[i] = p[2];
-                        dst[i + 1] = p[1];
-                        dst[i + 2] = p[0]
-                    }
-                    dst[i + 3] = 0;
-                }
-            }
-        }
-        _ => {
-            let mut pixels: Vec<BltPixel> = Vec::new();
-            pixels
-                .try_reserve_exact(src.len())
-                .map_err(|_| uefi::Status::OUT_OF_RESOURCES)?;
-            pixels.extend(src.iter().map(|p| BltPixel::new(p[0], p[1], p[2])));
-            gop.blt(BltOp::BufferToVideo {
-                buffer: &pixels,
-                src: uefi::proto::console::gop::BltRegion::Full,
-                dest: (0, 0),
-                dims: (width, height),
-            })?;
-        }
-    }
+
+    // Submit the already-composed frame through GOP as one full-screen blit.
+    // Writing each channel directly to the scan-out framebuffer exposed the
+    // draw order on slower firmware/board memory mappings, making the menu
+    // appear element by element. GOP owns pixel-format conversion and transfer.
+    let mut pixels: Vec<BltPixel> = Vec::new();
+    pixels
+        .try_reserve_exact(src.len())
+        .map_err(|_| uefi::Status::OUT_OF_RESOURCES)?;
+    pixels.extend(src.iter().map(|p| BltPixel::new(p[0], p[1], p[2])));
+    gop.blt(BltOp::BufferToVideo {
+        buffer: &pixels,
+        src: uefi::proto::console::gop::BltRegion::Full,
+        dest: (0, 0),
+        dims: (width, height),
+    })?;
     Ok(())
 }
 

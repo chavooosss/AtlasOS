@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# Install the officially published MEB classroom CA into the OS trust bundle.
+# This does not disable TLS verification or trust any school-specific CA.
+certificate=/usr/local/share/ca-certificates/atlasos-meb-fatihca.crt
+if [ ! -s "$certificate" ]; then
+    echo "AtlasOS MEB CA certificate is missing: $certificate" >&2
+    exit 1
+fi
+update-ca-certificates

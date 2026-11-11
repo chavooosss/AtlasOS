@@ -201,6 +201,76 @@ class SmartboardDemoTests(unittest.TestCase):
             audio.selectCardProfile("0", "input:analog-stereo")
             self.assertEqual(len(calls), before)
 
+    def test_smartboard_auto_selects_hdmi_surround_71_only_for_hda_intel_pch(self):
+        ui = self.load_ui()
+        card_output = """Card #0
+        Name: alsa_card.pci-test
+        Properties:
+                api.alsa.card.name = "HDA Intel PCH"
+        Profiles:
+                output:analog-stereo: Analog Stereo Output (sinks: 1, sources: 0, priority: 6500, available: yes)
+                output:hdmi-surround71: Digital Surround 7.1 (HDMI output) (sinks: 1, sources: 0, priority: 5900, available: yes)
+                output:hdmi-surround71-extra1: Digital Surround 7.1 (HDMI 2 output) (sinks: 1, sources: 0, priority: 5800, available: no)
+        Active Profile: output:analog-stereo
+"""
+        nodes = [{"id": 45, "info": {"props": {
+            "media.class": "Audio/Sink", "node.description": "HDMI Board"
+        }}}]
+        calls = []
+
+        def command(args, **_kwargs):
+            calls.append(args)
+            if args == ["pw-dump"]:
+                return SimpleNamespace(returncode=0, stdout=json.dumps(nodes))
+            if args[:2] == ["wpctl", "inspect"]:
+                return SimpleNamespace(returncode=0, stdout="id 45, type PipeWire:Interface:Node")
+            if args == ["pactl", "list", "cards"]:
+                return SimpleNamespace(returncode=0, stdout=card_output)
+            if args == ["pactl", "list", "sinks"]:
+                return SimpleNamespace(returncode=0, stdout="")
+            if args[:2] == ["wpctl", "get-volume"]:
+                return SimpleNamespace(returncode=0, stdout="Volume: 0.40")
+            return SimpleNamespace(returncode=0, stdout="")
+
+        with patch.object(ui.subprocess, "run", side_effect=command):
+            audio = ui.AtlasAudio()
+            self.assertTrue(audio.configureSmartboardProfile(final_attempt=True))
+        self.assertIn(["pactl", "set-card-profile", "0", "output:hdmi-surround71"], calls)
+        self.assertNotIn(["pactl", "set-card-profile", "0", "output:hdmi-surround71-extra1"], calls)
+
+    def test_smartboard_profile_selection_fails_closed_for_other_cards_or_unavailable_profile(self):
+        ui = self.load_ui()
+        fixtures = [
+            ("Realtek ALC", "yes"),
+            ("HDA Intel PCH", "no"),
+        ]
+        for card_name, availability in fixtures:
+            with self.subTest(card_name=card_name, availability=availability):
+                audio = ui.AtlasAudio()
+                audio._profiles = [{
+                    "cardId": "0", "cardName": card_name,
+                    "profile": "output:hdmi-surround71",
+                    "description": "Digital Surround 7.1 (HDMI output)",
+                    "availability": availability, "selected": False,
+                }]
+                with patch.object(ui.subprocess, "run") as run:
+                    run.return_value = SimpleNamespace(returncode=1, stdout="")
+                    self.assertFalse(audio.configureSmartboardProfile(final_attempt=True))
+                self.assertFalse(any(
+                    call.args[0][:2] == ["pactl", "set-card-profile"]
+                    for call in run.call_args_list
+                ))
+
+    def test_smartboard_profile_auto_selection_is_scoped_to_board_mode(self):
+        main = (COMPONENTS.parent / "Main.qml").read_text(encoding="utf-8")
+        self.assertIn("if (boardMode) smartboardAudioProfileTimer.start()", main)
+        self.assertIn("if (boardMode) {", main)
+        self.assertIn("atlasAudio.configureSmartboardProfile(finalAttempt)", main)
+        self.assertIn("if (!atlasAudio || atlasAudio.configureSmartboardProfile(finalAttempt) || finalAttempt)", main)
+        self.assertIn("if (!root.boardMode) return 1.0", main)
+        self.assertIn("if (physicalScale >= 1.9) return 1.75", main)
+        self.assertIn("Math.min(2.0, physicalScale)", main)
+
     def test_sound_settings_exposes_explicit_card_profile_selection(self):
         settings = (COMPONENTS / "AtlasSettings.qml").read_text(encoding="utf-8")
         self.assertIn("Ses kartı çıkış profili (yalnızca seçtiğinizde değişir)", settings)
@@ -321,13 +391,44 @@ class SmartboardDemoTests(unittest.TestCase):
 
     def test_chrome_scale_is_connected_to_atlas_density_without_laptop_enlargement(self):
         main = (COMPONENTS.parent / "Main.qml").read_text(encoding="utf-8")
+        browser = (COMPONENTS / "AtlasBrowser.qml").read_text(encoding="utf-8")
         ui = UI.read_text(encoding="utf-8")
         launcher = (ROOT / "config/includes.chroot/usr/local/bin/atlasos-browser").read_text(encoding="utf-8")
-        self.assertIn("setBrowserScaleFactor(boardMode ? interfaceScale : 1.0)", main)
+        self.assertIn("setBrowserScaleFactor(chromeScaleFactor)", main)
         self.assertIn("ATLASOS_CHROME_SCALE_FACTOR", ui)
         self.assertIn("--force-device-scale-factor=", launcher)
         self.assertIn("ATLASOS_CHROME_SCALE_FACTOR:-1.0", launcher)
         self.assertIn("close all browser windows to apply", launcher)
+        self.assertIn("property real browserContentZoomFactor", main)
+        self.assertIn("Math.min(2.0, physicalScale)", main)
+        self.assertIn("suggestedContentZoomFactor: root.browserContentZoomFactor", main)
+        self.assertIn("zoomFactor: browser.effectiveContentZoomFactor", browser)
+        self.assertIn("uiScale: root.browserUiScale", main)
+        self.assertIn("property real browserUiScale", main)
+        self.assertIn("if (!root.boardMode) return 1.0", main)
+        self.assertIn("if (physicalScale >= 1.9) return 1.75", main)
+        self.assertIn("return physicalScale >= 1.9 ? browserUiScale : interfaceScale", main)
+        self.assertIn("property bool customContentZoom", browser)
+        self.assertIn("readonly property real effectiveContentZoomFactor: customContentZoom", browser)
+        self.assertIn("? userContentZoomFactor : suggestedContentZoomFactor", browser)
+        self.assertIn("function resetContentZoom()", browser)
+        self.assertIn('objectName: "browserAddressDisplay"', browser)
+        self.assertNotIn("TextInput", browser)
+        self.assertNotIn("navigateAddress", browser)
+        self.assertIn("readonly property var platformTabs", browser)
+        self.assertNotIn("function newTab()", browser)
+        self.assertIn('currentUrl.toLowerCase().indexOf("https://") === 0', browser)
+        self.assertIn('browser.securePage ? "lock" : "info"', browser)
+        self.assertIn("browser.securePage ? theme.green : theme.muted", browser)
+        self.assertGreaterEqual(main.count("width: 28 * root.interfaceScale; height: 28 * root.interfaceScale"), 4)
+        self.assertIn("font.pixelSize: 19 * browser.uiScale", browser)
+
+    def test_qt_browser_content_zoom_tracks_physical_board_resolution_without_laptop_zoom(self):
+        main = (COMPONENTS.parent / "Main.qml").read_text(encoding="utf-8")
+        self.assertIn("if (!root.boardMode) return 1.0", main)
+        self.assertIn("(root.width * dpr) / 1920", main)
+        self.assertIn("(root.height * dpr) / 1080", main)
+        self.assertIn("Math.max(1.0, Math.min(2.0, physicalScale))", main)
 
     def test_browser_scale_factor_is_clamped_and_exported_for_child_launcher(self):
         ui = self.load_ui()

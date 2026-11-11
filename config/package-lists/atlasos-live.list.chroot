@@ -10,6 +10,7 @@ console-setup
 keyboard-configuration
 tzdata
 network-manager
+ca-certificates
 network-manager-gnome
 rfkill
 linux-firmware

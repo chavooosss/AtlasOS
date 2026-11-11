@@ -976,6 +976,10 @@ class AtlasAudio(QObject):
                 continue
             card_name_match = re.search(r"(?m)^\s*Name:\s*(.+)$", block)
             card_name = card_name_match.group(1).strip() if card_name_match else f"Ses kartı {card_id}"
+            alsa_name_match = re.search(
+                r'(?m)^\s*api\.alsa\.card\.name\s*=\s*"([^"]+)"\s*$', block
+            )
+            alsa_card_name = alsa_name_match.group(1).strip() if alsa_name_match else ""
             active_match = re.search(r"(?m)^\s*Active Profile:\s*(.+)$", block)
             active_profile = active_match.group(1).strip() if active_match else ""
             section = re.search(r"(?ms)^\s*Profiles:\s*\n(.*?)(?=^\s*(?:Active Profile|Ports):|\Z)", block)
@@ -991,7 +995,8 @@ class AtlasAudio(QObject):
                 label = f"{card_name} · {description}"
                 if availability == "unknown":
                     label += " · uygunluk bilinmiyor"
-                profiles.append({"cardId": card_id, "profile": profile, "label": label,
+                profiles.append({"cardId": card_id, "cardName": alsa_card_name,
+                                 "profile": profile, "description": description, "label": label,
                                  "availability": availability, "selected": profile == active_profile})
         return profiles
 
@@ -1070,22 +1075,68 @@ class AtlasAudio(QObject):
             self._output_status = "Ses çıkışları okunamadı; PipeWire/WirePlumber durumunu kontrol edin."
         self.changed.emit()
 
-    @Slot(str, str)
+    @Slot(str, str, result=bool)
     def selectCardProfile(self, card_id, profile):
         card_id = str(card_id)
         if not any(item["cardId"] == card_id and item["profile"] == profile for item in self._profiles):
             self._output_status = "Bu kart profili listede yok veya kullanılamıyor."
             self.changed.emit()
-            return
+            return False
         try:
             subprocess.run(["pactl", "set-card-profile", card_id, profile],
                            capture_output=True, text=True, timeout=5, check=True)
         except (OSError, subprocess.SubprocessError):
             self._output_status = "Ses kartı profili değiştirilemedi."
             self.changed.emit()
-            return
+            return False
         self.refreshOutputs()
         self.refresh()
+        return True
+
+    @Slot(bool, result=bool)
+    def configureSmartboardProfile(self, final_attempt=False):
+        # The login session may start PipeWire before its ALSA cards are ready.
+        # Re-read only card profiles on each bounded QML retry.
+        try:
+            cards = subprocess.run(
+                ["pactl", "list", "cards"], capture_output=True, text=True, timeout=2, check=False
+            )
+            if cards.returncode == 0:
+                self._profiles = self._parse_output_profiles(cards.stdout)
+        except (OSError, subprocess.TimeoutExpired):
+            self._profiles = []
+
+        candidates = [
+            item for item in self._profiles
+            if item.get("cardName", "").strip().casefold() == "hda intel pch"
+            and item.get("availability") == "yes"
+            and "hdmi" in item.get("description", "").casefold()
+            and re.search(r"surround\s*7[.,]1", item.get("description", ""), re.IGNORECASE)
+        ]
+        if len(candidates) != 1:
+            if final_attempt:
+                self._output_status = (
+                    "Tahta için uygun HDMI Surround 7.1 profili bulunamadı veya belirsiz; "
+                    "mevcut ses profili korundu."
+                )
+                self.changed.emit()
+            return False
+
+        profile = candidates[0]
+        if profile["selected"]:
+            self._output_status = (
+                "Tahta HDMI Surround 7.1 profili etkin; kısa test sesiyle hoparlörü doğrulayın."
+            )
+            self.changed.emit()
+            return True
+
+        if self.selectCardProfile(profile["cardId"], profile["profile"]):
+            self._output_status = (
+                "Tahta HDMI Surround 7.1 profili etkin; kısa test sesiyle hoparlörü doğrulayın."
+            )
+            self.changed.emit()
+            return True
+        return False
 
     @Slot(str, str)
     def selectOutputPort(self, sink_name, port_name):
